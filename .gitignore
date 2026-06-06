@@ -1,0 +1,27 @@
+# Questa
+work/
+transcript
+vsim.wlf
+*.wlf
+*.vstf
+
+# Vivado
+.Xil/
+*.cache/
+*.gen/
+*.hw/
+*.ip_user_files/
+*.runs/
+*.sim/
+*.xpr
+vivado*.jou
+vivado*.log
+
+# Generated simulation and memory files
+results/
+*.vcd
+
+# Editor/OS
+.vscode/
+Thumbs.db
+Desktop.ini
