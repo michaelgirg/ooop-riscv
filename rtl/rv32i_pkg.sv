@@ -35,4 +35,22 @@ localparam logic[6:0]
     OP_FENCE  = 7'b0001111,   //I-type  (FENCE FENCE.I — NOP in single-core)
     OP_SYSTEM = 7'b1110011;   //I-type  (ECALL EBREAK CSR* — trap-to-halt)
 
+
+//memory widths for dmem
+/*
+000 (LB and SB sign-extend)
+001 (LH and SH sign-extend)
+010 (LW and SW)
+100 (LBU zero-extend)
+101 (LHU zero-extend)
+    
+*/
+
+localparam logic[2:0]
+    MEM_BYTE = 3'b000,
+    MEM_HALF  = 3'b001,
+    MEM_WORD  = 3'b010,
+    MEM_BYTEU = 3'b100,
+    MEM_HALFU = 3'b101;
+
 endpackage
