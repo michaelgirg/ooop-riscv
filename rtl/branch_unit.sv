@@ -19,8 +19,8 @@ module branch_unit (
     localparam logic [2:0] BR_EQ = 3'b001;
     localparam logic [2:0] BR_NE = 3'b010;
     localparam logic [2:0] BR_LT = 3'b011;
-    localparam logic [2:0] BR_LTU = 3'b100;
-    localparam logic [2:0] BR_GE = 3'b101;
+    localparam logic [2:0] BR_GE = 3'b100;
+    localparam logic [2:0] BR_LTU = 3'b101;
     localparam logic [2:0] BR_GEU = 3'b110;
 
     always_comb begin

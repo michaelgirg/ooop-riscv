@@ -264,10 +264,33 @@ module decoder (
                         end
                     end
 
-                    3'b001: alu_op = ALU_SLL;
-                    3'b010: alu_op = ALU_SLT;
-                    3'b011: alu_op = ALU_SLTU;
-                    3'b100: alu_op = ALU_XOR;
+                    3'b001: begin
+                        alu_op = ALU_SLL;
+                        if (funct7 != 7'b0000000) begin
+                            illegal = 1'b1;
+                        end
+                    end
+
+                    3'b010: begin
+                        alu_op = ALU_SLT;
+                        if (funct7 != 7'b0000000) begin
+                            illegal = 1'b1;
+                        end
+                    end
+
+                    3'b011: begin
+                        alu_op = ALU_SLTU;
+                        if (funct7 != 7'b0000000) begin
+                            illegal = 1'b1;
+                        end
+                    end
+
+                    3'b100: begin
+                        alu_op = ALU_XOR;
+                        if (funct7 != 7'b0000000) begin
+                            illegal = 1'b1;
+                        end
+                    end
 
                     3'b101: begin
                         if (funct7 == 7'b0000000) begin
@@ -279,14 +302,45 @@ module decoder (
                         end
                     end
 
-                    3'b110:  alu_op = ALU_OR;
-                    3'b111:  alu_op = ALU_AND;
+                    3'b110: begin
+                        alu_op = ALU_OR;
+                        if (funct7 != 7'b0000000) begin
+                            illegal = 1'b1;
+                        end
+                    end
+
+                    3'b111: begin
+                        alu_op = ALU_AND;
+                        if (funct7 != 7'b0000000) begin
+                            illegal = 1'b1;
+                        end
+                    end
+
                     default: illegal = 1'b1;
                 endcase
             end
 
             OP_FENCE: begin
                 // FENCE and FENCE.I act as NOPs in this initial core.
+                case (funct3)
+                    3'b000: begin
+                        // FENCE requires fm=0000, rs1=x0, and rd=x0.
+                        if ((instruction[31:28] != 4'b0000) ||
+                            (instruction[19:15] != 5'b00000) ||
+                            (instruction[11:7]  != 5'b00000)) begin
+                            illegal = 1'b1;
+                        end
+                    end
+
+                    3'b001: begin
+                        // FENCE.I has a fixed RV32I encoding.
+                        if (instruction != 32'h0000_100f) begin
+                            illegal = 1'b1;
+                        end
+                    end
+
+                    default: illegal = 1'b1;
+                endcase
             end
 
             OP_SYSTEM: begin
