@@ -8,13 +8,7 @@ module imm_gen (
     input  logic [ 2:0] imm_sel,
     output logic [31:0] immediate
 );
-
-    // Different immediate formats for RV32I
-    localparam logic [2:0] IMM_I = 3'b000;  //immediate ALU operations, loads, and JALR
-    localparam logic [2:0] IMM_S = 3'b001;  //stores
-    localparam logic [2:0] IMM_B = 3'b010;  // SB-type branch immediate (conditional branches)
-    localparam logic [2:0] IMM_U = 3'b011;  //LUI and AUIPC
-    localparam logic [2:0] IMM_J = 3'b100;  // UJ-type jump immediate (JAL)
+    import rv32i_pkg::*;
 
     always_comb begin
         immediate = '0;

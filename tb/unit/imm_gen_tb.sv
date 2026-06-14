@@ -3,11 +3,7 @@
 module imm_gen_tb #(
     parameter int NUM_RANDOM_TESTS = 2000
 );
-    localparam logic [2:0] IMM_I = 3'b000;
-    localparam logic [2:0] IMM_S = 3'b001;
-    localparam logic [2:0] IMM_B = 3'b010;
-    localparam logic [2:0] IMM_U = 3'b011;
-    localparam logic [2:0] IMM_J = 3'b100;
+    import rv32i_pkg::*;
 
     logic [31:0] instruction;
     logic [2:0]  imm_sel;

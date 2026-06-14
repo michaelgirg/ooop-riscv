@@ -1,46 +1,49 @@
-//Instruction Memroy
-
-// Mem is word organized, but addresses are byte addresses
-// This makes it so address bit [1:0] are omitted
-
-// Note:
-// Each RV32I instruction is 4 bytes, so byte addresses 0, 4, 8, 12 select mem[0], mem[1], mem[2], mem[3].
-// Since it a 4-byte aligned instruction the last two bits are always 00 since we fetch whole instructions
-
-// address[31:2]  // tells us which instruction: mem[0], mem[1], mem[2]
-// address[1:0]   // tells us which byte inside that instruction
+// Instruction memory.
+//
+// The memory array is word-organized, but the interface uses byte addresses.
+// Each RV32I instruction occupies 4 bytes, so byte addresses 0, 4, 8, and 12
+// select mem[0], mem[1], mem[2], and mem[3]. Therefore:
+//   - address[31:2] selects the instruction word.
+//   - address[1:0] must be 2'b00 for an aligned RV32I instruction fetch.
+//
+// Uninitialized, misaligned, and out-of-range locations return the canonical
+// RV32I NOP. Invalid addresses also assert access_fault.
 
 module imem #(
     parameter int WORDS = 256,  // 1KB = 1024 Bytes / 4 Bytes = 256 words
     parameter string HEX_FILE = ""
 ) (
     input  logic [31:0] address,
-    output logic [31:0] instruction
+    output logic [31:0] instruction,
+    output logic        access_fault
 );
+    import rv32i_pkg::*;
 
-    // memory has WORDS entries and each entry is 32 bits wide:
-    // memory[0]
-    // memory[1]
-    // memory[2]
-    // ...
-    // memory[255]
     logic [31:0] mem[0:WORDS-1];
 
-
     initial begin
+        // Initialize every location to NOP so a short hex file does not leave
+        // unknown instructions in the unused portion of memory.
+        for (int i = 0; i < WORDS; i++) begin
+            mem[i] = INSTRUCTION_NOP;
+        end
+
+        // A hex image is optional, which keeps the module easy to reuse in
+        // small unit tests that directly initialize memory.
         if (HEX_FILE != "") begin
             $readmemh(HEX_FILE, mem);
         end
     end
 
     always_comb begin
-        instruction = 32'h0000_0013;  //addi x0, x0, 0 (this is a NOP)
-        // This is here so if the addr is out of range it will recieve this instruction instead of garabage
+        // Defaulting to NOP keeps a bad fetch from propagating X values while
+        // access_fault tells the core that the address was not valid.
+        instruction = INSTRUCTION_NOP;
+        access_fault = (address[1:0] != 2'b00) || (address[31:2] >= WORDS);
 
-        if (address[31:2] < WORDS) begin  //checks if within range
-            instruction = mem[address[31:2]];  //converts byte addr into word index
+        if (!access_fault) begin
+            instruction = mem[address[31:2]];
         end
-
     end
 
 endmodule

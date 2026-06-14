@@ -3,51 +3,7 @@
 module decoder_tb #(
     parameter int NUM_RANDOM_TESTS = 2000
 );
-    localparam logic [3:0] ALU_ADD    = 4'd0;
-    localparam logic [3:0] ALU_SUB    = 4'd1;
-    localparam logic [3:0] ALU_SLL    = 4'd2;
-    localparam logic [3:0] ALU_SRL    = 4'd3;
-    localparam logic [3:0] ALU_SRA    = 4'd4;
-    localparam logic [3:0] ALU_AND    = 4'd5;
-    localparam logic [3:0] ALU_OR     = 4'd6;
-    localparam logic [3:0] ALU_XOR    = 4'd7;
-    localparam logic [3:0] ALU_SLT    = 4'd8;
-    localparam logic [3:0] ALU_SLTU   = 4'd9;
-    localparam logic [3:0] ALU_COPY_B = 4'd10;
-
-    localparam logic [2:0] IMM_I = 3'd0;
-    localparam logic [2:0] IMM_S = 3'd1;
-    localparam logic [2:0] IMM_B = 3'd2;
-    localparam logic [2:0] IMM_U = 3'd3;
-    localparam logic [2:0] IMM_J = 3'd4;
-
-    localparam logic [2:0] BR_NONE = 3'd0;
-    localparam logic [2:0] BR_EQ   = 3'd1;
-    localparam logic [2:0] BR_NE   = 3'd2;
-    localparam logic [2:0] BR_LT   = 3'd3;
-    localparam logic [2:0] BR_GE   = 3'd4;
-    localparam logic [2:0] BR_LTU  = 3'd5;
-    localparam logic [2:0] BR_GEU  = 3'd6;
-
-    localparam logic [1:0] WB_ALU = 2'd0;
-    localparam logic [1:0] WB_MEM = 2'd1;
-    localparam logic [1:0] WB_PC4 = 2'd2;
-
-    localparam logic [1:0] MEM_BYTE = 2'd0;
-    localparam logic [1:0] MEM_HALF = 2'd1;
-    localparam logic [1:0] MEM_WORD = 2'd2;
-
-    localparam logic [6:0] OP_LUI    = 7'b0110111;
-    localparam logic [6:0] OP_AUIPC  = 7'b0010111;
-    localparam logic [6:0] OP_JAL    = 7'b1101111;
-    localparam logic [6:0] OP_JALR   = 7'b1100111;
-    localparam logic [6:0] OP_BRANCH = 7'b1100011;
-    localparam logic [6:0] OP_LOAD   = 7'b0000011;
-    localparam logic [6:0] OP_STORE  = 7'b0100011;
-    localparam logic [6:0] OP_IMM    = 7'b0010011;
-    localparam logic [6:0] OP_REG    = 7'b0110011;
-    localparam logic [6:0] OP_FENCE  = 7'b0001111;
-    localparam logic [6:0] OP_SYSTEM = 7'b1110011;
+    import rv32i_pkg::*;
 
     logic [31:0] instruction;
     logic [3:0]  alu_op;
@@ -330,6 +286,8 @@ module decoder_tb #(
         // FENCE instructions are currently decoded as no-ops.
         check_controls("FENCE",   32'h0000_000f, ALU_ADD, IMM_I, BR_NONE, WB_ALU, MEM_WORD, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
         check_controls("FENCE.I", 32'h0000_100f, ALU_ADD, IMM_I, BR_NONE, WB_ALU, MEM_WORD, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
+        check_controls("FENCE reserved fields ignored", 32'hf00f_8f8f, ALU_ADD, IMM_I, BR_NONE, WB_ALU, MEM_WORD, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
+        check_controls("FENCE.I reserved fields ignored", 32'habcd_9f8f, ALU_ADD, IMM_I, BR_NONE, WB_ALU, MEM_WORD, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
 
         // Environment instructions
         check_controls("ECALL",  32'h0000_0073, ALU_ADD, IMM_I, BR_NONE, WB_ALU, MEM_WORD, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b1, 1'b0);
@@ -345,10 +303,6 @@ module decoder_tb #(
         check_illegal("RV32M multiply unsupported", encode_r(7'b0000001, 3'b000));
         check_illegal("RV32M multiply-high unsupported", encode_r(7'b0000001, 3'b001));
         check_illegal("invalid FENCE funct3", encode_i(12'd0, 3'b010, 7'b0001111));
-        check_illegal("invalid FENCE fm", 32'h1000_000f);
-        check_illegal("invalid FENCE rs1", 32'h0000_800f);
-        check_illegal("invalid FENCE rd", 32'h0000_008f);
-        check_illegal("invalid FENCE.I immediate", 32'h0010_100f);
         check_illegal("unsupported SYSTEM instruction", 32'h0020_0073);
 
         // Random stimulus supplements the exhaustive directed instruction list.
