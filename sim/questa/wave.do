@@ -7,4 +7,6 @@ add wave -radix hexadecimal sim:/core_single_cycle_tb/dut/alu_result
 add wave -radix hexadecimal sim:/core_single_cycle_tb/dut/writeback_data
 add wave sim:/core_single_cycle_tb/dut/halted_o
 add wave sim:/core_single_cycle_tb/dut/illegal_instruction_o
+add wave sim:/core_single_cycle_tb/dut/instruction_fault_o
+add wave sim:/core_single_cycle_tb/dut/data_fault_o
 configure wave -signalnamewidth 1

@@ -15,7 +15,9 @@ module core_single_cycle #(
     output logic [31:0] current_pc_o,
     output logic [31:0] instruction_o,
     output logic        halted_o,
-    output logic        illegal_instruction_o
+    output logic        illegal_instruction_o,
+    output logic        instruction_fault_o,
+    output logic        data_fault_o
 );
     import rv32i_pkg::*;
 
@@ -50,17 +52,23 @@ module core_single_cycle #(
     logic [31:0] alu_operand_a;
     logic [31:0] alu_operand_b;
     logic [31:0] alu_result;
-    logic        alu_zero;
     logic        branch_taken;
     logic [2:0]  memory_funct3;
     logic [31:0] memory_read_data;
     logic [31:0] writeback_data;
     logic        architectural_enable;
+    logic        imem_access_fault;
+    logic        data_access_fault;
+    logic        control_target_misaligned;
+    logic        core_stop;
+    logic        request_enable;
 
     assign current_pc_o = current_pc;
     assign instruction_o = instruction;
-    assign halted_o = halt;
+    assign halted_o = core_stop;
     assign illegal_instruction_o = illegal;
+    assign instruction_fault_o = imem_access_fault || control_target_misaligned;
+    assign data_fault_o = data_access_fault;
 
     assign pc_plus_four = current_pc + 32'd4;
     assign rs1_addr = instruction[19:15];
@@ -74,8 +82,13 @@ module core_single_cycle #(
     // recreate the instruction funct3 value consumed by dmem.
     assign memory_funct3 = {load_unsigned, mem_size};
 
-    // Reset, halt, and illegal instructions cannot change architectural state.
-    assign architectural_enable = !rst_i && !halt && !illegal;
+    assign control_target_misaligned =
+        (branch_taken || jump) && (next_pc[1:0] != 2'b00);
+    assign core_stop = halt || illegal || instruction_fault_o || data_fault_o;
+
+    // Reset and stopped instructions cannot change architectural state.
+    assign request_enable = !rst_i && !halt && !illegal && !instruction_fault_o;
+    assign architectural_enable = request_enable && !data_fault_o;
 
     always_comb begin
         next_pc = pc_plus_four;
@@ -105,7 +118,7 @@ module core_single_cycle #(
     pc u_pc (
         .clk     (clk_i),
         .rst     (rst_i),
-        .en      (!halt && !illegal),
+        .en      (!core_stop),
         .next_pc (next_pc),
         .pc      (current_pc)
     );
@@ -115,7 +128,8 @@ module core_single_cycle #(
         .HEX_FILE (IMEM_HEX)
     ) u_imem (
         .address     (current_pc),
-        .instruction (instruction)
+        .instruction (instruction),
+        .access_fault(imem_access_fault)
     );
 
     decoder u_decoder (
@@ -159,7 +173,7 @@ module core_single_cycle #(
         .op_b   (alu_operand_b),
         .alu_op (alu_op),
         .result (alu_result),
-        .zero   (alu_zero)
+        .zero   ()
     );
 
     branch_unit u_branch_unit (
@@ -177,8 +191,10 @@ module core_single_cycle #(
         .addr      (alu_result),
         .wr_data   (rs2_data),
         .funct3    (memory_funct3),
-        .mem_write (mem_write && architectural_enable),
-        .rd_data   (memory_read_data)
+        .mem_read  (mem_read && request_enable),
+        .mem_write (mem_write && request_enable),
+        .rd_data   (memory_read_data),
+        .access_fault(data_access_fault)
     );
 
 endmodule

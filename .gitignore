@@ -1,6 +1,8 @@
 # Questa
 work/
+*_work/
 transcript
+modelsim.ini
 vsim.wlf
 *.wlf
 *.vstf

@@ -10,6 +10,8 @@ module core_single_cycle_tb;
     logic [31:0] instruction;
     logic halted;
     logic illegal_instruction;
+    logic instruction_fault;
+    logic data_fault;
 
     int errors;
     int cycles;
@@ -24,7 +26,9 @@ module core_single_cycle_tb;
         .current_pc_o          (current_pc),
         .instruction_o         (instruction),
         .halted_o              (halted),
-        .illegal_instruction_o (illegal_instruction)
+        .illegal_instruction_o (illegal_instruction),
+        .instruction_fault_o   (instruction_fault),
+        .data_fault_o          (data_fault)
     );
 
     initial clk = 1'b0;
@@ -41,14 +45,18 @@ module core_single_cycle_tb;
         end
     endtask
 
-    initial begin
-        errors = 0;
-        cycles = 0;
+    task automatic reset_core;
         rst = 1'b1;
-
         repeat (2) @(posedge clk);
         @(negedge clk);
         rst = 1'b0;
+        #1;
+    endtask
+
+    initial begin
+        errors = 0;
+        cycles = 0;
+        reset_core();
 
         while (!halted && (cycles < MAX_CYCLES)) begin
             @(posedge clk);
@@ -58,6 +66,17 @@ module core_single_cycle_tb;
             if (illegal_instruction) begin
                 $error("Unexpected illegal instruction at PC %08h: %08h",
                        current_pc, instruction);
+                errors++;
+                break;
+            end
+
+            if (instruction_fault || data_fault) begin
+                $error(
+                    "Unexpected core fault at PC %08h: instruction=%b data=%b",
+                    current_pc,
+                    instruction_fault,
+                    data_fault
+                );
                 errors++;
                 break;
             end
@@ -99,6 +118,43 @@ module core_single_cycle_tb;
         check_value(dut.u_dmem.mem[0], 32'h0000_000c, "memory word store");
         check_value(dut.u_dmem.mem[1], 32'h5000_00f0,
                     "memory byte and halfword stores");
+
+        // The core has no trap handler yet, so precise faults freeze the PC and
+        // suppress architectural writes while reporting the cause.
+        dut.u_imem.mem[0] = 32'hffff_ffff;
+        reset_core();
+        if (!halted || !illegal_instruction || instruction_fault || data_fault) begin
+            $error("Illegal-instruction stop behavior was incorrect");
+            errors++;
+        end
+        check_value(current_pc, 32'd0, "illegal instruction PC hold");
+
+        // jalr x0, 2(x0): bit zero is cleared, but target 2 is not IALIGN=32.
+        dut.u_imem.mem[0] = 32'h0020_0067;
+        reset_core();
+        if (!halted || !instruction_fault || illegal_instruction || data_fault) begin
+            $error("Misaligned control-target behavior was incorrect");
+            errors++;
+        end
+        check_value(current_pc, 32'd0, "misaligned jump PC hold");
+
+        // lw x1, 1(x0) must fault rather than silently rounding the address.
+        dut.u_imem.mem[0] = 32'h0010_2083;
+        reset_core();
+        if (!halted || !data_fault || illegal_instruction || instruction_fault) begin
+            $error("Misaligned data-access behavior was incorrect");
+            errors++;
+        end
+        check_value(current_pc, 32'd0, "misaligned load PC hold");
+
+        // lw x1, -4(x0) is outside this core's local data memory.
+        dut.u_imem.mem[0] = 32'hffc0_2083;
+        reset_core();
+        if (!halted || !data_fault || illegal_instruction || instruction_fault) begin
+            $error("Out-of-range data-access behavior was incorrect");
+            errors++;
+        end
+        check_value(current_pc, 32'd0, "out-of-range load PC hold");
 
         if (errors == 0) begin
             $display("PASS: core_single_cycle_tb (%0d executed cycles)", cycles);

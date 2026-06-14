@@ -1,34 +1,23 @@
-//Instruction Memroy
-
-// Mem is word organized, but addresses are byte addresses
-// This makes it so address bit [1:0] are omitted
-
-// Note:
-// Each RV32I instruction is 4 bytes, so byte addresses 0, 4, 8, 12 select mem[0], mem[1], mem[2], mem[3].
-// Since it a 4-byte aligned instruction the last two bits are always 00 since we fetch whole instructions
-
-// address[31:2]  // tells us which instruction: mem[0], mem[1], mem[2]
-// address[1:0]   // tells us which byte inside that instruction
+// Word-organized instruction memory with byte-addressed inputs.
+// Uninitialized and out-of-range locations return the canonical RV32I NOP.
 
 module imem #(
     parameter int WORDS = 256,  // 1KB = 1024 Bytes / 4 Bytes = 256 words
     parameter string HEX_FILE = ""
 ) (
     input  logic [31:0] address,
-    output logic [31:0] instruction
+    output logic [31:0] instruction,
+    output logic        access_fault
 );
     import rv32i_pkg::*;
 
-    // memory has WORDS entries and each entry is 32 bits wide:
-    // memory[0]
-    // memory[1]
-    // memory[2]
-    // ...
-    // memory[255]
     logic [31:0] mem[0:WORDS-1];
 
-
     initial begin
+        for (int i = 0; i < WORDS; i++) begin
+            mem[i] = INSTRUCTION_NOP;
+        end
+
         if (HEX_FILE != "") begin
             $readmemh(HEX_FILE, mem);
         end
@@ -36,12 +25,11 @@ module imem #(
 
     always_comb begin
         instruction = INSTRUCTION_NOP;
-        // This is here so if the addr is out of range it will recieve this instruction instead of garabage
+        access_fault = (address[1:0] != 2'b00) || (address[31:2] >= WORDS);
 
-        if (address[31:2] < WORDS) begin  //checks if within range
-            instruction = mem[address[31:2]];  //converts byte addr into word index
+        if (!access_fault) begin
+            instruction = mem[address[31:2]];
         end
-
     end
 
 endmodule

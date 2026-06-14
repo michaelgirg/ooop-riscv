@@ -8,7 +8,14 @@ create_project -force $project_name $project_dir -part $part_name
 set_property target_language Verilog [current_project]
 set_property simulator_language Mixed [current_project]
 
-read_verilog -sv [glob "$repo_root/rtl/*.sv"]
+# Packages must be parsed before modules that import them.
+read_verilog -sv "$repo_root/rtl/rv32i_pkg.sv"
+set rtl_sources [glob "$repo_root/rtl/*.sv"]
+set package_index [lsearch -exact $rtl_sources "$repo_root/rtl/rv32i_pkg.sv"]
+if {$package_index >= 0} {
+  set rtl_sources [lreplace $rtl_sources $package_index $package_index]
+}
+read_verilog -sv $rtl_sources
 set_property top core_single_cycle [current_fileset]
 
 # The core has no physical board I/O wrapper yet, so constraints are optional.

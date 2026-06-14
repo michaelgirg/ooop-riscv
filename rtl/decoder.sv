@@ -270,22 +270,9 @@ module decoder (
             OP_FENCE: begin
                 // FENCE and FENCE.I act as NOPs in this initial core.
                 case (funct3)
-                    3'b000: begin
-                        // FENCE requires fm=0000, rs1=x0, and rd=x0.
-                        if ((instruction[31:28] != 4'b0000) ||
-                            (instruction[19:15] != 5'b00000) ||
-                            (instruction[11:7]  != 5'b00000)) begin
-                            illegal = 1'b1;
-                        end
-                    end
-
-                    3'b001: begin
-                        // FENCE.I has a fixed RV32I encoding.
-                        if (instruction != 32'h0000_100f) begin
-                            illegal = 1'b1;
-                        end
-                    end
-
+                    // Reserved fields are ignored for forward compatibility.
+                    3'b000: begin end
+                    3'b001: begin end
                     default: illegal = 1'b1;
                 endcase
             end
@@ -302,14 +289,6 @@ module decoder (
                 illegal = 1'b1;
             end
         endcase
-        // NOTE:
-
-        // FENCE is used to enforce ordering between mem operations, like making sure earlier loads/stores finish
-        // before later ones. For right now we treat them as NOPs because we don't have cahces YET or OOO or mem buffering
-
-        // SYSTEM are special control instructions like env calls, breakpoints, and Control and Status Register. Since we are doing 
-        // simple core right now we are only handling ECALL and EBREAK by setting halt while marking other sys instrutions as illegal. 
-
         // Prevent illegal instructions from changing architectural state.
         if (illegal) begin
             reg_write = 1'b0;

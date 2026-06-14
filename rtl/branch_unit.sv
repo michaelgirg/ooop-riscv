@@ -6,7 +6,8 @@
 
 // NOTE:
 // This module only decides if the branch is taken and does not calculate the branch 
-// target address. The PC logic uses the branch_taken singal together with branch_immediate to choose the next PC. 
+// target address. The PC logic combines branch_taken with the branch immediate
+// to select the next PC.
 
 module branch_unit (
     input  logic [31:0] rs1_data,

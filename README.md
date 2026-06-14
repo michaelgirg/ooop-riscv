@@ -30,12 +30,11 @@ synth/vivado/  Vivado batch synthesis scripts
 
 ## First Simulation
 
-From a Questa command prompt:
+From `sim/questa` in a terminal:
 
-```tcl
-cd sim/questa
-do run_unit.do
-do run_core.do
+```powershell
+vsim -c -do run_unit.do
+vsim -c -do run_core.do
 ```
 
 Both scripts terminate with a nonzero simulation result when a test reports an
