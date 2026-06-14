@@ -45,7 +45,7 @@ after reset; only `x0` is architecturally guaranteed to read zero.
 ## Integration Contract
 
 All instruction decode constants and packed control fields belong in
-`rtl/rv32i_pkg.sv`. Shared interfaces must be reviewed by both contributors
+`rtl/common/rv32i_pkg.sv`. Shared interfaces must be reviewed by both contributors
 before they are changed.
 
 The core exposes a small debug interface for integration tests:

@@ -9,9 +9,11 @@ set_property target_language Verilog [current_project]
 set_property simulator_language Mixed [current_project]
 
 # Packages must be parsed before modules that import them.
-read_verilog -sv "$repo_root/rtl/rv32i_pkg.sv"
-set rtl_sources [glob "$repo_root/rtl/*.sv"]
-set package_index [lsearch -exact $rtl_sources "$repo_root/rtl/rv32i_pkg.sv"]
+read_verilog -sv "$repo_root/rtl/common/rv32i_pkg.sv"
+set rtl_sources [concat \
+  [glob "$repo_root/rtl/common/*.sv"] \
+  [glob "$repo_root/rtl/single_cycle/*.sv"]]
+set package_index [lsearch -exact $rtl_sources "$repo_root/rtl/common/rv32i_pkg.sv"]
 if {$package_index >= 0} {
   set rtl_sources [lreplace $rtl_sources $package_index $package_index]
 }

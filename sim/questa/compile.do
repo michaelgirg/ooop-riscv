@@ -10,24 +10,26 @@ if {[file exists $work_lib]} {
 
 vlib $work_lib
 
-# Compile the package before every module that imports it.
-vlog -work $work_lib -sv ../../rtl/rv32i_pkg.sv
-vlog -work $work_lib -sv ../../rtl/pc.sv
-vlog -work $work_lib -sv ../../rtl/imem.sv
-vlog -work $work_lib -sv ../../rtl/imm_gen.sv
-vlog -work $work_lib -sv ../../rtl/branch_unit.sv
-vlog -work $work_lib -sv ../../rtl/decoder.sv
-vlog -work $work_lib -sv ../../rtl/alu.sv
-vlog -work $work_lib -sv ../../rtl/regfile.sv
-vlog -work $work_lib -sv ../../rtl/dmem.sv
-vlog -work $work_lib -sv ../../rtl/core_single_cycle.sv
+# Compile the shared package before every module that imports it.
+vlog -work $work_lib -sv ../../rtl/common/rv32i_pkg.sv
+vlog -work $work_lib -sv ../../rtl/common/pc.sv
+vlog -work $work_lib -sv ../../rtl/common/imem.sv
+vlog -work $work_lib -sv ../../rtl/common/imm_gen.sv
+vlog -work $work_lib -sv ../../rtl/common/branch_unit.sv
+vlog -work $work_lib -sv ../../rtl/common/decoder.sv
+vlog -work $work_lib -sv ../../rtl/common/alu.sv
+vlog -work $work_lib -sv ../../rtl/common/regfile.sv
+vlog -work $work_lib -sv ../../rtl/common/dmem.sv
 
-vlog -work $work_lib -sv ../../tb/unit/pc_tb.sv
-vlog -work $work_lib -sv ../../tb/unit/imem_tb.sv
-vlog -work $work_lib -sv ../../tb/unit/imm_gen_tb.sv
-vlog -work $work_lib -sv ../../tb/unit/branch_unit_tb.sv
-vlog -work $work_lib -sv ../../tb/unit/decoder_tb.sv
-vlog -work $work_lib -sv ../../tb/unit/alu_tb.sv
-vlog -work $work_lib -sv ../../tb/unit/regfile_tb.sv
-vlog -work $work_lib -sv ../../tb/unit/dmem_tb.sv
-vlog -work $work_lib -sv ../../tb/integration/core_single_cycle_tb.sv
+# Completed single-cycle reference core.
+vlog -work $work_lib -sv ../../rtl/single_cycle/core_single_cycle.sv
+
+vlog -work $work_lib -sv ../../tb/unit/common/pc_tb.sv
+vlog -work $work_lib -sv ../../tb/unit/common/imem_tb.sv
+vlog -work $work_lib -sv ../../tb/unit/common/imm_gen_tb.sv
+vlog -work $work_lib -sv ../../tb/unit/common/branch_unit_tb.sv
+vlog -work $work_lib -sv ../../tb/unit/common/decoder_tb.sv
+vlog -work $work_lib -sv ../../tb/unit/common/alu_tb.sv
+vlog -work $work_lib -sv ../../tb/unit/common/regfile_tb.sv
+vlog -work $work_lib -sv ../../tb/unit/common/dmem_tb.sv
+vlog -work $work_lib -sv ../../tb/integration/single_cycle/core_single_cycle_tb.sv

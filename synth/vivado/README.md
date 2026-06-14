@@ -10,8 +10,8 @@ Before using it:
 3. Later add a board wrapper for clock/reset, BRAM, LEDs, and UART.
 4. Put board pin and clock constraints in `constraints.xdc`.
 
-The script reads `rv32i_pkg.sv` before all importing modules. Keep this ordering
-when adding future pipeline or out-of-order source files.
+The script reads `rtl/common/rv32i_pkg.sv` before all importing modules. Keep
+this ordering when adding future pipeline or out-of-order source files.
 
 Run from the repository root:
 

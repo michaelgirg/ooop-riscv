@@ -7,9 +7,9 @@ processor. The project will progress through three separately verified cores:
 2. Five-stage pipelined RV32I
 3. Small out-of-order RV32I
 
-The current milestone is a correct single-cycle core. Pipelining and
-out-of-order hardware should not begin until the directed single-cycle
-regression passes.
+The single-cycle core now serves as the passing reference design. The current
+milestone is the five-stage pipelined core. Out-of-order hardware should not
+begin until the directed pipeline regression passes.
 
 ## Tools
 
@@ -19,14 +19,21 @@ regression passes.
 ## Current Layout
 
 ```text
-docs/          Architecture decisions, supported ISA, roadmap, and ownership
-rtl/           Synthesizable SystemVerilog
-tb/unit/       Self-checking module tests
-tb/integration/Full-core tests
-tb/programs/   Hand-authored instruction-memory images
-sim/questa/    Questa compile and run scripts
-synth/vivado/  Vivado batch synthesis scripts
+docs/                         Architecture decisions, roadmap, and ownership
+rtl/common/                   RTL shared by both in-order cores
+rtl/single_cycle/             Completed single-cycle top level
+rtl/pipeline/                 Five-stage pipeline implementation
+tb/unit/common/               Tests for shared RTL modules
+tb/unit/pipeline/             Tests for pipeline-only modules
+tb/integration/single_cycle/  Completed single-cycle integration test
+tb/integration/pipeline/      Pipeline integration test
+tb/programs/                  Hand-authored instruction-memory images
+sim/questa/                   Questa compile and run scripts
+synth/vivado/                 Vivado batch synthesis scripts
 ```
+
+The completed single-cycle core is intentionally kept separate and should
+remain a passing reference while `rtl/pipeline/` is developed.
 
 ## First Simulation
 
@@ -90,4 +97,4 @@ will be added after the core passes simulation.
 ## Collaboration
 
 Read `docs/collaboration.md` before implementing modules. Freeze ports and
-shared types in `rtl/rv32i_pkg.sv` before parallel work begins.
+shared types in `rtl/common/rv32i_pkg.sv` before parallel work begins.
