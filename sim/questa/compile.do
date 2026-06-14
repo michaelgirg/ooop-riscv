@@ -17,6 +17,7 @@ vlog -sv ../../rtl/decoder.sv
 vlog -sv ../../rtl/alu.sv
 vlog -sv ../../rtl/regfile.sv
 vlog -sv ../../rtl/dmem.sv
+vlog -sv ../../rtl/core_single_cycle.sv
 
 vlog -sv ../../tb/unit/pc_tb.sv
 vlog -sv ../../tb/unit/imem_tb.sv
@@ -26,3 +27,4 @@ vlog -sv ../../tb/unit/decoder_tb.sv
 vlog -sv ../../tb/unit/alu_tb.sv
 vlog -sv ../../tb/unit/regfile_tb.sv
 vlog -sv ../../tb/unit/dmem_tb.sv
+vlog -sv ../../tb/integration/core_single_cycle_tb.sv
