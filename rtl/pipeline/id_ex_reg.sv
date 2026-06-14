@@ -35,9 +35,9 @@ module id_ex_reg (
     input logic clk,
     input logic rst,
     input logic en,
-    input logic flush,
-    
+    input logic flush,  
     input id_ex_t data, //Info produced from the Decode Stage
+    
     output id_ex_t data_o //registerd info sent into the execute stage 
 );
 
