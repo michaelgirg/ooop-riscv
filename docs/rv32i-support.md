@@ -14,16 +14,19 @@
 
 ## Special Instructions
 
-- `FENCE` and `FENCE.I`: NOP for the initial single-core memory model
+- `FENCE`: NOP for the initial single-core memory model; reserved fields are
+  ignored as required for forward compatibility
+- `FENCE.I` (`Zifencei`): supported as a NOP; unused fields are ignored
 - `ECALL` and `EBREAK`: halt simulation
 - CSR instructions: unsupported initially
 
-## Exceptions Deferred
+## Fault Policy
 
-- Misaligned instruction fetch
-- Misaligned data access
-- Access faults
-- Illegal-instruction trap handler
+- Illegal instructions, misaligned control-flow targets, misaligned data
+  accesses, and local-memory access faults are detected.
+- The single-cycle core freezes and exposes the fault through debug outputs.
+- Trap CSRs, trap-vector redirection, and exception-return instructions are
+  deferred.
 
 The decoder must still identify unsupported encodings so the testbench can
 report them rather than silently executing arbitrary behavior.

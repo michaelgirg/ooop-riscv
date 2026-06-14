@@ -3,14 +3,7 @@
 module branch_unit_tb #(
     parameter int NUM_RANDOM_TESTS = 5000
 );
-    // These values are the decoder-to-branch-unit interface contract.
-    localparam logic [2:0] BR_NONE = 3'd0;
-    localparam logic [2:0] BR_EQ   = 3'd1;
-    localparam logic [2:0] BR_NE   = 3'd2;
-    localparam logic [2:0] BR_LT   = 3'd3;
-    localparam logic [2:0] BR_GE   = 3'd4;
-    localparam logic [2:0] BR_LTU  = 3'd5;
-    localparam logic [2:0] BR_GEU  = 3'd6;
+    import rv32i_pkg::*;
 
     logic [31:0] rs1_data;
     logic [31:0] rs2_data;

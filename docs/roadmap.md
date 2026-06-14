@@ -7,19 +7,21 @@
 - [x] Questa scripts
 - [x] Vivado synthesis script
 - [ ] Confirm FPGA board and device part
-- [ ] Install/configure Questa and Vivado command-line access
+- [x] Install/configure Questa command-line access
+- [ ] Install/configure Vivado command-line access
 
 ## M1: Single-Cycle Core
 
-- [ ] Unit-test register file
-- [ ] Unit-test ALU
-- [ ] Unit-test immediate generator
-- [ ] Unit-test decoder
-- [ ] Integrate `ADDI`, `ADD`, `SUB`, `LW`, and `SW`
-- [ ] Add branches and jumps
-- [ ] Add remaining RV32I integer operations
-- [ ] Add byte and halfword memory operations
-- [ ] Run complete directed regression
+- [x] Unit-test register file
+- [x] Unit-test ALU
+- [x] Unit-test immediate generator
+- [x] Unit-test decoder
+- [x] Integrate `ADDI`, `ADD`, `SUB`, `LW`, and `SW`
+- [x] Add branches and jumps
+- [x] Add remaining RV32I integer operations
+- [x] Add byte and halfword memory operations
+- [x] Detect illegal, misaligned, and out-of-range accesses
+- [x] Run complete directed regression
 - [ ] Synthesize in Vivado and record timing/utilization
 
 ## M2: Five-Stage Pipeline

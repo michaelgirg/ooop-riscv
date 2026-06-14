@@ -42,6 +42,7 @@
 - Loads sign-extend or zero-extend correctly.
 - Stores apply the correct byte enables.
 - Branch and jump targets are correct.
+- Misaligned and out-of-range requests cannot modify architectural state.
 - A multi-instruction program reaches its expected final register and memory
   state.
 - Questa reports no test errors or unexpected latches.
