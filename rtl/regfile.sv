@@ -31,11 +31,11 @@ module regfile #(
 
 
     always_ff @(posedge clk) begin
-        if(we && (rd_addr !=5'd0)) regs[rd_addr] <= rd_data;
+        if (we && (rd_addr != 5'd0)) regs[rd_addr] <= rd_data;
     end
 
     assign rs1_data = rs1_addr == 5'd0 ? '0 : regs[rs1_addr];
-    assign rs2_data = rs2_addr == 5'd0 ? '0 : regs[rs2_addr];;
+    assign rs2_data = rs2_addr == 5'd0 ? '0 : regs[rs2_addr];
 
 
 endmodule
