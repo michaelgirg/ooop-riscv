@@ -1,5 +1,9 @@
-// Byte-addressed RV32I data memory with asynchronous reads and synchronous
-// writes. Invalid, misaligned, and out-of-range requests raise access_fault.
+// Data memory.
+//
+// The interface is byte-addressed while the internal array stores 32-bit
+// words. addr[1:0] selects a byte lane within the word. Loads are asynchronous,
+// and stores update memory on the rising clock edge. Invalid encodings,
+// misaligned accesses, and out-of-range requests assert access_fault.
 
 module dmem #(
     parameter int WIDTH = 32,
@@ -29,6 +33,8 @@ module dmem #(
     logic address_aligned;
 
     initial begin
+        // Give simulation a deterministic starting state before optionally
+        // loading a program-specific data image.
         for (int i = 0; i < DEPTH; i++) begin
             mem[i] = '0;
         end
@@ -38,12 +44,15 @@ module dmem #(
         end
     end
 
+    // Split the byte address into its word index and byte-lane offset.
     assign word_addr = addr[ADDR_WIDTH+1:2];
     assign byte_off = addr[1:0];
     assign address_valid = (addr[WIDTH-1:2] < DEPTH);
     assign word = address_valid ? mem[word_addr] : '0;
     assign request = mem_read || mem_write;
 
+    // A valid request must be exactly one load or one store with a supported
+    // RV32I funct3 encoding. Simultaneous read and write is rejected.
     always_comb begin
         encoding_valid = 1'b0;
 
@@ -66,6 +75,8 @@ module dmem #(
         end
     end
 
+    // Bytes may use any offset, halfwords require addr[0] = 0, and words
+    // require addr[1:0] = 2'b00.
     always_comb begin
         case (funct3[1:0])
             2'b00: address_aligned = 1'b1;
@@ -78,6 +89,8 @@ module dmem #(
     assign access_fault = request &&
                           (!address_valid || !address_aligned || !encoding_valid);
 
+    // Select the requested byte or halfword and perform the sign or zero
+    // extension required by the load instruction.
     always_comb begin
         rd_data = '0;
 
@@ -125,6 +138,8 @@ module dmem #(
     // the array. always_ff would reject the two procedural writers in Questa.
     always @(posedge clk) begin
         if (mem_write && !access_fault) begin
+            // Partial stores preserve every byte lane not selected by funct3
+            // and byte_off.
             case (funct3)
                 STORE_BYTE: begin
                     case (byte_off)

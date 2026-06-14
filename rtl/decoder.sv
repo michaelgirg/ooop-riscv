@@ -17,15 +17,15 @@
 module decoder (
     input logic [31:0] instruction,
 
-    output logic [3:0] alu_op,     //Reports to ALU what operation to perform
-    output logic [2:0] imm_sel,    //Reports to imm_gen which immediate format to build
-    output logic [2:0] branch_op,  //Reports to branch_unit what comparison to perform
-    output logic [1:0] wb_sel,     //Reports to writeback mux what value should be written into the reg file
-    output logic [1:0] mem_size,   //Reports to memory unit what size of data to access
+    output logic [3:0] alu_op,     // Operation performed by the ALU
+    output logic [2:0] imm_sel,    // Immediate format built by imm_gen
+    output logic [2:0] branch_op,  // Comparison performed by branch_unit
+    output logic [1:0] wb_sel,     // Value selected for register writeback
+    output logic [1:0] mem_size,   // Byte, halfword, or word memory access
 
     output logic reg_write,
-    output logic alu_src_imm,    //Tells ALU to use the immediate as one of its inputs instead of rs2
-    output logic alu_src_pc,     //Tells ALU to use the PC as one of its inputs
+    output logic alu_src_imm,    // Selects the immediate instead of rs2
+    output logic alu_src_pc,     // Selects the PC instead of rs1
     output logic mem_read,
     output logic mem_write,
     output logic load_unsigned,
@@ -82,8 +82,8 @@ module decoder (
             end
 
             OP_JAL: begin
-                //rd = PC + 4
-                //next PC = PC + J-immediate 
+                // rd = PC + 4
+                // next PC = PC + J-immediate
                 reg_write = 1'b1;
                 jump      = 1'b1;
                 imm_sel   = IMM_J;
@@ -289,6 +289,16 @@ module decoder (
                 illegal = 1'b1;
             end
         endcase
+
+        // Future design notes:
+        // - FENCE can remain a NOP in this single-cycle core because memory
+        //   operations already complete in program order. A pipelined or
+        //   out-of-order implementation must enforce the requested ordering.
+        // - FENCE.I matters once instruction data can be modified or cached.
+        // - ECALL and EBREAK halt this simple simulation environment. Other
+        //   SYSTEM instructions remain illegal until CSR and trap support
+        //   are implemented.
+
         // Prevent illegal instructions from changing architectural state.
         if (illegal) begin
             reg_write = 1'b0;
