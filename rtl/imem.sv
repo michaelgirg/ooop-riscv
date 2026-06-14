@@ -17,6 +17,7 @@ module imem #(
     input  logic [31:0] address,
     output logic [31:0] instruction
 );
+    import rv32i_pkg::*;
 
     // memory has WORDS entries and each entry is 32 bits wide:
     // memory[0]
@@ -34,7 +35,7 @@ module imem #(
     end
 
     always_comb begin
-        instruction = 32'h0000_0013;  //addi x0, x0, 0 (this is a NOP)
+        instruction = INSTRUCTION_NOP;
         // This is here so if the addr is out of range it will recieve this instruction instead of garabage
 
         if (address[31:2] < WORDS) begin  //checks if within range

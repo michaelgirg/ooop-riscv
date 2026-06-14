@@ -14,14 +14,7 @@ module branch_unit (
     input  logic [ 2:0] branch_op,
     output logic        branch_taken
 );
-
-    localparam logic [2:0] BR_NONE = 3'b000;
-    localparam logic [2:0] BR_EQ = 3'b001;
-    localparam logic [2:0] BR_NE = 3'b010;
-    localparam logic [2:0] BR_LT = 3'b011;
-    localparam logic [2:0] BR_GE = 3'b100;
-    localparam logic [2:0] BR_LTU = 3'b101;
-    localparam logic [2:0] BR_GEU = 3'b110;
+    import rv32i_pkg::*;
 
     always_comb begin
         branch_taken = 1'b0;

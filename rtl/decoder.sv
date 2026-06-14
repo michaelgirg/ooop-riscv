@@ -34,6 +34,7 @@ module decoder (
     output logic halt,
     output logic illegal
 );
+    import rv32i_pkg::*;
 
     logic [6:0] opcode;
     logic [2:0] funct3;
@@ -42,60 +43,6 @@ module decoder (
     assign opcode = instruction[6:0];
     assign funct3 = instruction[14:12];
     assign funct7 = instruction[31:25];
-
-    // ALU operations
-    localparam logic [3:0] ALU_ADD = 4'd0;  // ADD/ADDI: A + B
-    localparam logic [3:0] ALU_SUB = 4'd1;  // SUB: A - B
-    localparam logic [3:0] ALU_SLL = 4'd2;  // SLL/SLLI: shift A left by B[4:0]
-    localparam logic [3:0] ALU_SRL = 4'd3;  // SRL/SRLI: logical shift A right by B[4:0]
-    localparam logic [3:0] ALU_SRA = 4'd4;  // SRA/SRAI: arithmetic shift A right by B[4:0]
-    localparam logic [3:0] ALU_AND = 4'd5;  // AND/ANDI: bitwise A & B
-    localparam logic [3:0] ALU_OR = 4'd6;  // OR/ORI: bitwise A | B
-    localparam logic [3:0] ALU_XOR = 4'd7;  // XOR/XORI: bitwise A ^ B
-    localparam logic [3:0] ALU_SLT = 4'd8;  // SLT/SLTI: signed A < signed B ? 1 : 0
-    localparam logic [3:0] ALU_SLTU = 4'd9;  // SLTU/SLTIU: unsigned A < unsigned B ? 1 : 0
-    localparam logic [3:0] ALU_COPY_B = 4'd10;  // Internal ALU control code for LUI to pass immediate/input B through unchanged
-
-    // Immediate formats
-    localparam logic [2:0] IMM_I = 3'd0;
-    localparam logic [2:0] IMM_S = 3'd1;
-    localparam logic [2:0] IMM_B = 3'd2;
-    localparam logic [2:0] IMM_U = 3'd3;
-    localparam logic [2:0] IMM_J = 3'd4;
-
-    // Branch operations
-    localparam logic [2:0] BR_NONE = 3'd0;
-    localparam logic [2:0] BR_EQ = 3'd1;
-    localparam logic [2:0] BR_NE = 3'd2;
-    localparam logic [2:0] BR_LT = 3'd3;
-    localparam logic [2:0] BR_GE = 3'd4;
-    localparam logic [2:0] BR_LTU = 3'd5;
-    localparam logic [2:0] BR_GEU = 3'd6;
-
-    // Writeback sources
-    localparam logic [1:0] WB_ALU = 2'd0;
-    localparam logic [1:0] WB_MEM = 2'd1;
-    localparam logic [1:0] WB_PC4 = 2'd2;
-
-    // Memory access sizes
-    localparam logic [1:0] MEM_BYTE = 2'd0;
-    localparam logic [1:0] MEM_HALF = 2'd1;
-    localparam logic [1:0] MEM_WORD = 2'd2;
-
-    // RV32I opcodes (page 100 of docs/EECS-2016-1.pdf)
-    localparam logic [6:0] OP_LUI = 7'b0110111;
-    localparam logic [6:0] OP_AUIPC = 7'b0010111;
-    localparam logic [6:0] OP_JAL = 7'b1101111;
-    localparam logic [6:0] OP_JALR = 7'b1100111;
-
-    localparam logic [6:0] OP_BRANCH = 7'b1100011;  // BEQ through BGEU
-    localparam logic [6:0] OP_LOAD = 7'b0000011;  // LB through LHU
-    localparam logic [6:0] OP_STORE = 7'b0100011;  // SB through SW
-    localparam logic [6:0] OP_IMM = 7'b0010011;  // ADDI through SRAI
-    localparam logic [6:0] OP_REG = 7'b0110011;  // ADD through AND
-
-    localparam logic [6:0] OP_FENCE = 7'b0001111;  // FENCE and FENCE.I
-    localparam logic [6:0] OP_SYSTEM = 7'b1110011;  // ECALL and EBREAK
 
     always_comb begin
         // Safe defaults prevent latch inference.
