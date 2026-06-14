@@ -67,6 +67,17 @@ creating modules:
 - `MEM/WB`: valid bit, ALU result, load data, PC + 4, destination register,
   writeback controls, and fault information
 
+Define all four payloads as packed structs in
+`rtl/common/rv32i_pkg.sv` before either person writes a pipeline-register
+module. This makes the package the single source of truth for field names,
+widths, and ordering.
+
+Questa 2021.2 accepts named assignment patterns such as
+`'{valid: 1'b0, pc: '0, ...}` for packed structs. Icarus Verilog 12 may reject
+that syntax, so only use concatenation-based bubble constants if Icarus becomes
+an officially supported project tool. A concatenation depends on exact field
+ordering and is easier to break when a struct changes.
+
 Shared edits:
 
 - `rtl/common/rv32i_pkg.sv`
