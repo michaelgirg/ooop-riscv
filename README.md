@@ -41,6 +41,41 @@ do run_core.do
 Both scripts terminate with a nonzero simulation result when a test reports an
 error.
 
+## Optional Side Quest: Standard RV32I Tests
+
+After the directed regression passes, the core can be connected to a
+standardized RISC-V instruction-test suite for broader ISA coverage.
+
+- Start with the legacy `riscv-tests` `rv32ui` suite.
+- Add a RISC-V GNU toolchain and an ELF-to-hex conversion script.
+- Provide a linker script matching the core's instruction and data memories.
+- Adapt the testbench to detect pass/fail at `EBREAK` and enforce a timeout.
+- Later, consider the newer `riscv-arch-test` ACT4 framework for architectural
+  certification testing.
+
+This is an optional verification extension, not a prerequisite for beginning
+the pipelined core.
+
+## Optional Side Quest: Architecture and PPA
+
+Once the integer cores are stable, the project can expand in one of several
+directions:
+
+- **Higher frequency:** use synthesis timing reports to identify critical paths,
+  add or rebalance pipeline stages, and compare maximum clock frequency.
+- **Area and power:** measure FPGA resource use and power estimates, then explore
+  smaller queues, shared execution units, clock enables, and memory inference.
+- **Floating point:** add the RISC-V `F` extension, including floating-point
+  registers, execution units, decode, rounding modes, and verification.
+- **RV64:** widen the datapath and architectural state to 64 bits, then implement
+  RV64I instructions and the required 32-bit word operations.
+- **Larger microarchitecture:** increase issue width, ROB and reservation-station
+  capacity, execution units, and load/store resources while measuring the
+  resulting performance and hardware cost.
+
+Each track should begin from a passing baseline and record frequency, area,
+power, and test results before and after the change.
+
 ## Vivado Synthesis
 
 Edit `synth/vivado/create_project.tcl` to select the FPGA part for your board,
