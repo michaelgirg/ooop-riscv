@@ -77,4 +77,114 @@ package rv32i_pkg;
     localparam logic [31:0] INSTRUCTION_EBREAK = 32'h0010_0073;
     localparam logic [31:0] INSTRUCTION_FENCE_I = 32'h0000_100f;
 
+    // Pipeline-register payloads
+    //
+    // These packed structs define exactly what information crosses each stage
+    // boundary. Keeping them in the shared package prevents the top level and
+    // the four pipeline-register modules from disagreeing about field names or
+    // widths.
+
+    // Information produced by Instruction Fetch and consumed by Decode.
+    typedef struct packed {
+        // valid = 1 means this entry contains a real instruction.
+        // valid = 0 means this entry is an empty pipeline bubble.
+        logic        valid;
+        logic [31:0] pc;
+        logic [31:0] instruction;
+        logic        instruction_fault;
+    } if_id_t;
+
+    // Decoded instruction information consumed by the Execute stage.
+    typedef struct packed {
+        logic        valid;
+
+        // Address information used by branches, jumps, and link writeback.
+        logic [31:0] pc;
+        logic [31:0] pc_plus_four;
+
+        // Register addresses are retained for hazard detection and forwarding.
+        logic [4:0]  rs1_addr;
+        logic [4:0]  rs2_addr;
+        logic [4:0]  rd_addr;
+
+        // Operand values read during Decode.
+        logic [31:0] rs1_data;
+        logic [31:0] rs2_data;
+        logic [31:0] immediate;
+
+        // Decoded operation selections.
+        alu_op_t     alu_op;
+        branch_op_t  branch_op;
+        wb_sel_t     wb_sel;
+        mem_size_t   mem_size;
+
+        // Datapath controls.
+        logic        alu_src_imm;
+        logic        alu_src_pc;
+
+        // Register and memory side-effect controls.
+        logic        reg_write;
+        logic        mem_read;
+        logic        mem_write;
+        logic        load_unsigned;
+
+        // Control-flow and exceptional conditions.
+        logic        jump;
+        logic        jalr;
+        logic        halt;
+        logic        illegal;
+        logic        instruction_fault;
+    } id_ex_t;
+
+    // Execute results and controls consumed by the Memory stage.
+    typedef struct packed {
+        logic        valid;
+        logic [31:0] pc;
+        logic [31:0] pc_plus_four;
+        logic [31:0] alu_result;
+        logic [31:0] store_data;
+        logic [4:0]  rd_addr;
+
+        wb_sel_t     wb_sel;
+        mem_size_t   mem_size;
+
+        logic        reg_write;
+        logic        mem_read;
+        logic        mem_write;
+        logic        load_unsigned;
+
+        logic        halt;
+        logic        illegal;
+        logic        instruction_fault;
+        logic        control_target_misaligned;
+    } ex_mem_t;
+
+    // Final results and controls consumed by the Writeback stage.
+    typedef struct packed {
+        logic        valid;
+        logic [31:0] pc;
+        logic [31:0] pc_plus_four;
+        logic [31:0] alu_result;
+        logic [31:0] memory_read_data;
+        logic [4:0]  rd_addr;
+
+        wb_sel_t     wb_sel;
+        logic        reg_write;
+
+        logic        halt;
+        logic        illegal;
+        logic        instruction_fault;
+        logic        data_fault;
+        logic        control_target_misaligned;
+    } mem_wb_t;
+
+    // A bubble is not literal "nothing." Hardware bits must still contain
+    // values, so every field is cleared to zero. Most importantly, valid is
+    // zero, which tells later stages not to treat the entry as an instruction
+    // or allow it to change registers or memory.
+    localparam if_id_t  IF_ID_BUBBLE  = '0;
+    localparam id_ex_t  ID_EX_BUBBLE  = '0;
+    localparam ex_mem_t EX_MEM_BUBBLE = '0;
+    localparam mem_wb_t MEM_WB_BUBBLE = '0;
+
 endpackage
