@@ -38,26 +38,16 @@ module forwarding_unit (
         if (mem_wb_data.valid && mem_wb_data.reg_write && (mem_wb_data.rd_addr != 5'd0)) begin
             // If MEM/WB writes the same register that the current instruction
             // needs, tell the ALU-input mux to use the MEM/WB value.
-            if (mem_wb_data.rd_addr == rs1_addr) begin
-                forward_a = 2'b01;
-            end
-
-            if (mem_wb_data.rd_addr == rs2_addr) begin
-                forward_b = 2'b01;
-            end
+            if (mem_wb_data.rd_addr == rs1_addr) forward_a = 2'b01;
+            if (mem_wb_data.rd_addr == rs2_addr) forward_b = 2'b01;
         end
 
         // Forward from EX/MEM when it contains the newest required result.
         // A load cannot forward from EX/MEM because alu_result is only its
         // memory address. The loaded value becomes available in MEM/WB.
         if (ex_mem_data.valid && ex_mem_data.reg_write && !ex_mem_data.mem_read && (ex_mem_data.rd_addr != 5'd0)) begin
-            if (ex_mem_data.rd_addr == rs1_addr) begin
-                forward_a = 2'b10;
-            end
-
-            if (ex_mem_data.rd_addr == rs2_addr) begin
-                forward_b = 2'b10;
-            end
+            if (ex_mem_data.rd_addr == rs1_addr) forward_a = 2'b10;
+            if (ex_mem_data.rd_addr == rs2_addr) forward_b = 2'b10;
         end
     end
 

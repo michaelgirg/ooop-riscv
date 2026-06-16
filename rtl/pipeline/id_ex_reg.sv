@@ -40,14 +40,10 @@ module id_ex_reg (
 
     always_ff @(posedge clk) begin
         // rst or flush removes the current instruction by inserting a bubble.
-        if (rst || flush) begin
-            data_o <= ID_EX_BUBBLE;
-        end
+        if (rst || flush) data_o <= ID_EX_BUBBLE;
 
         // Advance the decoded instruction when the pipeline is enabled.
-        else if (en) begin
-            data_o <= data;
-        end
+        else if (en) data_o <= data;
 
         // Otherwise, data_o holds its current value during a stall.
     end

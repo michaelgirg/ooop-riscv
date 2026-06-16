@@ -30,14 +30,10 @@ module ex_mem_reg (
     always_ff @(posedge clk) begin
         // Reset or flush removes the current instruction by inserting a bubble.
         // A bubble has valid = 0 and cannot change memory or the register file.
-        if (rst || flush) begin
-            data_o <= EX_MEM_BUBBLE;
-        end
+        if (rst || flush) data_o <= EX_MEM_BUBBLE;
 
         // When enabled, advance the EX results into the MEM stage.
-        else if (en) begin
-            data_o <= data;
-        end
+        else if (en) data_o <= data;
 
         // When en = 0, keep the current contents until the pipeline advances.
     end
