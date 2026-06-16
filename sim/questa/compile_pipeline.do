@@ -25,14 +25,21 @@ foreach source {
     vlog -work $work_lib -sv ../../rtl/common/$source
 }
 
-# Pipeline files are currently comment-only placeholders. Add each file to
-# this list as soon as it contains a complete module.
+# Completed pipeline modules.
+vlog -work $work_lib -sv ../../rtl/pipeline/id_ex_reg.sv
+vlog -work $work_lib -sv ../../rtl/pipeline/ex_mem_reg.sv
+vlog -work $work_lib -sv ../../rtl/pipeline/forwarding_unit.sv
+
+# Pipeline unit tests for completed modules.
+vlog -work $work_lib -sv ../../tb/unit/pipeline/id_ex_reg_tb.sv
+vlog -work $work_lib -sv ../../tb/unit/pipeline/ex_mem_reg_tb.sv
+vlog -work $work_lib -sv ../../tb/unit/pipeline/forwarding_unit_tb.sv
+
+# Pipeline files below are still placeholders. Add each file to this list as
+# soon as it contains a complete module.
 #
 # vlog -work $work_lib -sv ../../rtl/pipeline/if_id_reg.sv
-# vlog -work $work_lib -sv ../../rtl/pipeline/id_ex_reg.sv
-# vlog -work $work_lib -sv ../../rtl/pipeline/ex_mem_reg.sv
 # vlog -work $work_lib -sv ../../rtl/pipeline/mem_wb_reg.sv
-# vlog -work $work_lib -sv ../../rtl/pipeline/forwarding_unit.sv
 # vlog -work $work_lib -sv ../../rtl/pipeline/load_use_hazard_unit.sv
 # vlog -work $work_lib -sv ../../rtl/pipeline/pipeline_control.sv
 # vlog -work $work_lib -sv ../../rtl/pipeline/core_pipeline.sv
