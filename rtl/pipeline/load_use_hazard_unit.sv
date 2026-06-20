@@ -27,6 +27,14 @@ This is why OOO is nice so we can actually do an independent instruction instead
 
 RAW = Read After Write hazard where the newer instruction wants to read from a register before the older instruction has
 actually finished writing it.
+
+
+
+Cycle:  1    2    3    4    5    6
+lw      IF   ID   EX   MEM  WB
+add          IF   ID   ID   EX   MEM
+bubble                 EX
+
 */
 
 module load_use_hazard_unit (
