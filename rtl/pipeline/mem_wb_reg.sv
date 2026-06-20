@@ -14,8 +14,8 @@ module mem_wb_reg
   input  logic    clk,
   input  logic    rst,
   input  logic    flush,   // trap squash: kill this writeback
-  input  mem_wb_t d,       // from MEM stage
-  output mem_wb_t q        // to WB stage
+  input  var mem_wb_t d,       // from MEM stage
+  output var mem_wb_t q        // to WB stage
 );
   always_ff @(posedge clk or posedge rst) begin
     if      (rst) q <= MEM_WB_BUBBLE;

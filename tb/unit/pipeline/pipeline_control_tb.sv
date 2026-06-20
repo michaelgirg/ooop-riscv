@@ -1,2 +1,110 @@
-// Pipeline-control testbench.
-// Owner: Person B.
+module pipeline_control_tb;
+    logic ex_redirect;
+    logic [31:0] ex_target;
+    logic load_use_stall;
+    logic trap_req;
+    logic [31:0] trap_target;
+    logic pc_redirect;
+    logic [31:0] pc_target;
+    logic pc_stall;
+    logic stall_if_id;
+    logic flush_if_id;
+    logic flush_id_ex;
+    int errors;
+
+    pipeline_control dut (
+        .ex_redirect   (ex_redirect),
+        .ex_target     (ex_target),
+        .load_use_stall(load_use_stall),
+        .trap_req      (trap_req),
+        .trap_target   (trap_target),
+        .pc_redirect   (pc_redirect),
+        .pc_target     (pc_target),
+        .pc_stall      (pc_stall),
+        .stall_if_id   (stall_if_id),
+        .flush_if_id   (flush_if_id),
+        .flush_id_ex   (flush_id_ex)
+    );
+
+    task automatic clear_inputs();
+        ex_redirect = 1'b0;
+        ex_target = 32'h0000_0000;
+        load_use_stall = 1'b0;
+        trap_req = 1'b0;
+        trap_target = 32'h0000_0000;
+    endtask
+
+    task automatic check(
+        input string name,
+        input logic expected_pc_redirect,
+        input logic [31:0] expected_pc_target,
+        input logic expected_pc_stall,
+        input logic expected_stall_if_id,
+        input logic expected_flush_if_id,
+        input logic expected_flush_id_ex
+    );
+        #1;
+        if ((pc_redirect !== expected_pc_redirect) ||
+            (pc_target !== expected_pc_target) ||
+            (pc_stall !== expected_pc_stall) ||
+            (stall_if_id !== expected_stall_if_id) ||
+            (flush_if_id !== expected_flush_if_id) ||
+            (flush_id_ex !== expected_flush_id_ex)) begin
+            $error("FAIL %s: redirect=%b/%b target=0x%08h/0x%08h pc_stall=%b/%b stall_if_id=%b/%b flush_if_id=%b/%b flush_id_ex=%b/%b",
+                   name,
+                   pc_redirect, expected_pc_redirect,
+                   pc_target, expected_pc_target,
+                   pc_stall, expected_pc_stall,
+                   stall_if_id, expected_stall_if_id,
+                   flush_if_id, expected_flush_if_id,
+                   flush_id_ex, expected_flush_id_ex);
+            errors++;
+        end
+    endtask
+
+    initial begin
+        errors = 0;
+
+        clear_inputs();
+        check("normal advance", 1'b0, 32'h0000_0000, 1'b0, 1'b0, 1'b0, 1'b0);
+
+        clear_inputs();
+        load_use_stall = 1'b1;
+        check("load-use stall", 1'b0, 32'h0000_0000, 1'b1, 1'b1, 1'b0, 1'b1);
+
+        clear_inputs();
+        ex_redirect = 1'b1;
+        ex_target = 32'h0000_4000;
+        check("EX redirect", 1'b1, 32'h0000_4000, 1'b0, 1'b0, 1'b1, 1'b1);
+
+        clear_inputs();
+        trap_req = 1'b1;
+        trap_target = 32'h0000_0080;
+        check("trap redirect", 1'b1, 32'h0000_0080, 1'b0, 1'b0, 1'b1, 1'b1);
+
+        clear_inputs();
+        ex_redirect = 1'b1;
+        ex_target = 32'h0000_4000;
+        load_use_stall = 1'b1;
+        check("redirect beats load-use stall", 1'b1, 32'h0000_4000, 1'b0, 1'b0, 1'b1, 1'b1);
+
+        clear_inputs();
+        trap_req = 1'b1;
+        trap_target = 32'h0000_0080;
+        ex_redirect = 1'b1;
+        ex_target = 32'h0000_4000;
+        load_use_stall = 1'b1;
+        check("trap beats redirect and load-use stall", 1'b1, 32'h0000_0080, 1'b0, 1'b0, 1'b1, 1'b1);
+
+        clear_inputs();
+        ex_redirect = 1'b0;
+        ex_target = 32'h1111_2222;
+        trap_req = 1'b0;
+        trap_target = 32'h3333_4444;
+        check("inactive targets do not leak", 1'b0, 32'h0000_0000, 1'b0, 1'b0, 1'b0, 1'b0);
+
+        if (errors == 0) $display("PASS: pipeline_control_tb");
+        else $fatal(1, "FAIL: pipeline_control_tb had %0d errors", errors);
+    end
+
+endmodule

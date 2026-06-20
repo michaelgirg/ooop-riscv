@@ -17,8 +17,8 @@ module if_id_reg
   input  logic   rst,
   input  logic   stall,    // from pipeline_control (load-use)
   input  logic   flush,    // from pipeline_control (redirect/trap)
-  input  if_id_t d,        // from IF stage
-  output if_id_t q         // to ID stage
+  input  var if_id_t d,        // from IF stage
+  output var if_id_t q         // to ID stage
 );
   always_ff @(posedge clk or posedge rst) begin
     if      (rst) q <= IF_ID_BUBBLE;
