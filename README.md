@@ -1,15 +1,16 @@
 # OOOP-RISCV
 
 OOOP-RISCV is a learning-focused SystemVerilog implementation of an RV32I
-processor. The project will progress through three separately verified cores:
+processor. The project is being built in three separately verified cores:
 
 1. Single-cycle RV32I
 2. Five-stage pipelined RV32I
 3. Small out-of-order RV32I
 
-The single-cycle core now serves as the passing reference design. The current
-milestone is the five-stage pipelined core. Out-of-order hardware should not
-begin until the directed pipeline regression passes.
+The single-cycle core is the passing reference design. The five-stage pipeline
+now has its unit tests and smoke integration test passing in Questa. The next
+major milestone is broader pipeline verification before starting the
+out-of-order core.
 
 ## Tools
 
@@ -20,32 +21,43 @@ begin until the directed pipeline regression passes.
 
 ```text
 docs/                         Architecture decisions, roadmap, and ownership
-rtl/common/                   RTL shared by both in-order cores
+rtl/common/                   RTL shared by the single-cycle and pipeline cores
 rtl/single_cycle/             Completed single-cycle top level
-rtl/pipeline/                 Five-stage pipeline implementation
+rtl/pipeline/                 Five-stage pipeline RTL and top level
 tb/unit/common/               Tests for shared RTL modules
 tb/unit/pipeline/             Tests for pipeline-only modules
-tb/integration/single_cycle/  Completed single-cycle integration test
-tb/integration/pipeline/      Pipeline integration test
+tb/integration/single_cycle/  Single-cycle integration test
+tb/integration/pipeline/      Pipeline integration smoke test
 tb/programs/                  Hand-authored instruction-memory images
 sim/questa/                   Questa compile and run scripts
 synth/vivado/                 Vivado batch synthesis scripts
 ```
 
-The completed single-cycle core is intentionally kept separate and should
-remain a passing reference while `rtl/pipeline/` is developed.
+Generated Questa libraries such as `work/`, `*_work/`, `transcript`, and
+`modelsim.ini` are ignored and should not be committed.
 
-## First Simulation
+## Simulation
 
-From `sim/questa` in a terminal:
+Run these from `sim/questa` in a terminal.
 
 ```powershell
 vsim -c -do run_unit.do
 vsim -c -do run_core.do
+vsim -c -do run_pipeline_unit.do
+vsim -c -do run_pipeline_core.do
 ```
 
-Both scripts terminate with a nonzero simulation result when a test reports an
-error.
+The first two commands test the shared RTL and single-cycle reference core. The
+last two commands test the pipeline modules and the pipelined top-level smoke
+program. Each script exits with a nonzero result when a test reports an error.
+
+## Current Verification Status
+
+- Shared/common unit tests: passing
+- Single-cycle integration smoke test: passing
+- Pipeline unit tests: passing
+- Pipeline integration smoke test: passing
+- Vivado synthesis/timing: still to be recorded
 
 ## Side Quests
 
@@ -63,8 +75,9 @@ then run:
 vivado -mode batch -source synth/vivado/create_project.tcl
 ```
 
-The first synthesis target is `core_single_cycle`. Board I/O and an FPGA wrapper
-will be added after the core passes simulation.
+The first synthesis target is `core_single_cycle`. Pipeline synthesis should be
+run after the pipeline simulation regression is broader than the current smoke
+test.
 
 ## Collaboration
 

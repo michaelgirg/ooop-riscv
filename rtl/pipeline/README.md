@@ -1,16 +1,26 @@
 # Pipeline RTL
 
-This directory contains the five-stage pipelined core. The files are
-intentionally comment-only placeholders so the team can implement the RTL.
+This directory contains the five-stage pipelined RV32I core.
 
-- `core_pipeline.sv`: shared top-level integration
-- `forwarding_unit.sv`: Person A
-- `load_use_hazard_unit.sv`: Person A
-- `id_ex_reg.sv`: Person A
-- `ex_mem_reg.sv`: Person A
-- `pipeline_control.sv`: Person B
-- `if_id_reg.sv`: Person B
-- `mem_wb_reg.sv`: Person B
+## Files
 
-Coordinate changes to module ports and pipeline-register contents before
-editing the shared top level.
+- `core_pipeline.sv`: shared five-stage top-level integration
+- `if_id_reg.sv`: IF/ID pipeline register
+- `id_ex_reg.sv`: ID/EX pipeline register
+- `ex_mem_reg.sv`: EX/MEM pipeline register
+- `mem_wb_reg.sv`: MEM/WB pipeline register
+- `forwarding_unit.sv`: EX-stage operand forwarding control
+- `load_use_hazard_unit.sv`: one-cycle load-use hazard detector
+- `pipeline_control.sv`: PC stall/redirect and pipeline flush arbiter
+
+## Current Status
+
+The pipeline register modules, forwarding unit, load-use hazard unit, pipeline
+control unit, and top-level smoke integration test pass in Questa.
+
+## Ownership Reminder
+
+Coordinate changes to module ports, package structs, bubble constants, and the
+top-level wiring before editing shared interfaces. Small local implementation
+changes are fine, but anything that changes a field name, width, enum, or
+pipeline-register payload needs both teammates to know.

@@ -4,8 +4,10 @@ if {![info exists work_lib]} {
     set work_lib pipeline_work
 }
 
-if {[file exists $work_lib]} {
-    vdel -lib $work_lib -all
+# Start from a fresh Questa library. Generated libraries are not tracked,
+# so this must also work from a clean checkout.
+if {[file isdirectory $work_lib]} {
+    catch {vdel -lib $work_lib -all}
 }
 
 vlib $work_lib
@@ -43,6 +45,6 @@ vlog -work $work_lib -sv ../../tb/unit/pipeline/forwarding_unit_tb.sv
 vlog -work $work_lib -sv ../../tb/unit/pipeline/load_use_hazard_unit_tb.sv
 vlog -work $work_lib -sv ../../tb/unit/pipeline/pipeline_control_tb.sv
 
-# Shared top-level files are still placeholders. Add them when integration starts.
+# Pipeline top-level integration is compiled by run_pipeline_core.do.
 # vlog -work $work_lib -sv ../../rtl/pipeline/core_pipeline.sv
 # vlog -work $work_lib -sv ../../tb/integration/pipeline/core_pipeline_tb.sv

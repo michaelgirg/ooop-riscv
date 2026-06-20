@@ -26,11 +26,14 @@
 
 ## M2: Five-Stage Pipeline
 
-- [ ] IF/ID, ID/EX, EX/MEM, and MEM/WB registers
-- [ ] Data forwarding
-- [ ] Load-use stall
-- [ ] Control-hazard flush
-- [ ] Pipeline integration regression
+- [x] IF/ID, ID/EX, EX/MEM, and MEM/WB registers
+- [x] Data forwarding
+- [x] Load-use stall
+- [x] Control-hazard flush
+- [x] Pipeline top-level integration smoke test
+- [ ] Add more directed hazard programs beyond the smoke test
+- [ ] Add fault/flush integration tests for the pipeline
+- [ ] Synthesize in Vivado and record timing/utilization
 
 ## M3: Out-of-Order Core
 

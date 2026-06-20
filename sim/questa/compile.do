@@ -4,8 +4,10 @@ if {![info exists work_lib]} {
     set work_lib work
 }
 
-if {[file exists $work_lib]} {
-    vdel -lib $work_lib -all
+# Start from a fresh Questa library. Generated libraries are not tracked,
+# so this must also work from a clean checkout.
+if {[file isdirectory $work_lib]} {
+    catch {vdel -lib $work_lib -all}
 }
 
 vlib $work_lib
