@@ -53,8 +53,8 @@ module if_id_reg_tb;
         errors = 0;
 
         rst = 1'b1;
-        #1;
-        check("async reset immediately inserts bubble", IF_ID_BUBBLE);
+        tick();
+        check("sync reset inserts bubble", IF_ID_BUBBLE);
 
         rst = 1'b0;
         d = make_entry(32'h0000_2000, 32'h0020_0113);
@@ -78,8 +78,8 @@ module if_id_reg_tb;
         check("advance after flush", d);
 
         rst = 1'b1;
-        #1;
-        check("async reset beats current contents", IF_ID_BUBBLE);
+        tick();
+        check("sync reset beats current contents", IF_ID_BUBBLE);
 
         if (errors == 0) $display("PASS: if_id_reg_tb");
         else $fatal(1, "FAIL: if_id_reg_tb had %0d errors", errors);

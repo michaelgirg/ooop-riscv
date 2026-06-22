@@ -17,7 +17,7 @@ module mem_wb_reg
   input  var mem_wb_t d,       // from MEM stage
   output var mem_wb_t q        // to WB stage
 );
-  always_ff @(posedge clk or posedge rst) begin
+  always_ff @(posedge clk) begin
     if      (rst) q <= MEM_WB_BUBBLE;
     else if (flush)  q <= MEM_WB_BUBBLE;
     else             q <= d;

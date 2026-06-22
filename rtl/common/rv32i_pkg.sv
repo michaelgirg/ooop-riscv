@@ -1,8 +1,3 @@
-//Hi this is Antonio I changed id_id and mem_wb to active high rst but didn't reflect that in 
-//tbs so make sure to account for that future Antonio i'm not tryna do that rn
-
-
-
 package rv32i_pkg;
 
     localparam int XLEN = 32;

@@ -54,8 +54,8 @@ module mem_wb_reg_tb;
         errors = 0;
 
         rst = 1'b1;
-        #1;
-        check("async reset immediately inserts bubble", MEM_WB_BUBBLE);
+        tick();
+        check("sync reset inserts bubble", MEM_WB_BUBBLE);
 
         rst = 1'b0;
         d = make_entry(32'h0000_2000, 5'd6);
@@ -73,8 +73,8 @@ module mem_wb_reg_tb;
         check("advance after flush", d);
 
         rst = 1'b1;
-        #1;
-        check("async reset beats current contents", MEM_WB_BUBBLE);
+        tick();
+        check("sync reset beats current contents", MEM_WB_BUBBLE);
 
         if (errors == 0) $display("PASS: mem_wb_reg_tb");
         else $fatal(1, "FAIL: mem_wb_reg_tb had %0d errors", errors);

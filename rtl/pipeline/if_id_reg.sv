@@ -20,7 +20,7 @@ module if_id_reg
   input  var if_id_t d,        // from IF stage
   output var if_id_t q         // to ID stage
 );
-  always_ff @(posedge clk or posedge rst) begin
+  always_ff @(posedge clk) begin
     if      (rst) q <= IF_ID_BUBBLE;
     else if (flush)  q <= IF_ID_BUBBLE;
     else if (stall)  q <= q;
