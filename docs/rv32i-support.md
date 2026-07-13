@@ -1,4 +1,4 @@
-# RV32I Support
+# RV32I And RV32M Support
 
 ## Milestone 1A
 
@@ -11,6 +11,17 @@
 - `SLLI`, `SRLI`, `SRAI`
 - `ADD`, `SUB`, `SLL`, `SLT`, `SLTU`
 - `XOR`, `SRL`, `SRA`, `OR`, `AND`
+
+## RV32M Single-Cycle Support
+
+- `MUL`, `MULH`, `MULHSU`, `MULHU`
+- `DIV`, `DIVU`, `REM`, `REMU`
+- Divide by zero returns the architectural quotient or dividend remainder;
+  it does not raise a trap.
+- Signed overflow for `0x80000000 / 0xffffffff` returns `0x80000000`, and the
+  corresponding remainder is zero.
+- The single-cycle core uses combinational multiplication and division. The
+  pipelined core's variable-latency RV32M integration remains separate.
 
 ## Special Instructions
 

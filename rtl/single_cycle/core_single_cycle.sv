@@ -1,4 +1,4 @@
-// Single-cycle RV32I core.
+// Single-cycle RV32IM core.
 //
 // Every instruction is fetched, decoded, executed, and prepared for
 // architectural update within one clock period. The PC, register file, and
@@ -38,6 +38,8 @@ module core_single_cycle #(
     logic [2:0] branch_op;
     logic [1:0] wb_sel;
     logic [1:0] mem_size;
+    muldiv_op_t muldiv_op;
+    logic       is_muldiv;
     logic       reg_write;
     logic       alu_src_imm;
     logic       alu_src_pc;
@@ -52,6 +54,7 @@ module core_single_cycle #(
     logic [31:0] alu_operand_a;
     logic [31:0] alu_operand_b;
     logic [31:0] alu_result;
+    logic [31:0] muldiv_result;
     logic        branch_taken;
     logic [2:0]  memory_funct3;
     logic [31:0] memory_read_data;
@@ -108,7 +111,11 @@ module core_single_cycle #(
 
     always_comb begin
         case (wb_sel)
-            WB_ALU: writeback_data = alu_result;
+            // RV32M operations use the normal ALU writeback selection, but
+            // replace the ALU value with the multiply/divide result.
+            WB_ALU: begin
+                writeback_data = is_muldiv ? muldiv_result : alu_result;
+            end
             WB_MEM: writeback_data = memory_read_data;
             WB_PC4: writeback_data = pc_plus_four;
             default: writeback_data = '0;
@@ -139,6 +146,7 @@ module core_single_cycle #(
         .branch_op    (branch_op),
         .wb_sel       (wb_sel),
         .mem_size     (mem_size),
+        .muldiv_op    (muldiv_op),
         .reg_write    (reg_write),
         .alu_src_imm  (alu_src_imm),
         .alu_src_pc   (alu_src_pc),
@@ -147,6 +155,7 @@ module core_single_cycle #(
         .load_unsigned(load_unsigned),
         .jump         (jump),
         .jalr         (jalr),
+        .is_muldiv    (is_muldiv),
         .halt         (halt),
         .illegal      (illegal)
     );
@@ -174,6 +183,13 @@ module core_single_cycle #(
         .alu_op (alu_op),
         .result (alu_result),
         .zero   ()
+    );
+
+    muldiv_single_cycle u_muldiv_single_cycle (
+        .op       (muldiv_op),
+        .operand_a(rs1_data),
+        .operand_b(rs2_data),
+        .result   (muldiv_result)
     );
 
     branch_unit u_branch_unit (

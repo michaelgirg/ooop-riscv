@@ -1,13 +1,14 @@
 # OOOP-RISCV
 
 OOOP-RISCV is a learning-focused SystemVerilog implementation of an RV32I
-processor. The project is being built in three separately verified cores:
+processor. The single-cycle reference core also implements the RV32M
+multiply/divide extension. The project is built as separately verified cores:
 
-1. Single-cycle RV32I
+1. Single-cycle RV32IM
 2. Five-stage pipelined RV32I
 3. Small out-of-order RV32I
 
-The single-cycle core is the passing reference design. The five-stage pipeline
+The single-cycle RV32IM core is the passing reference design. The five-stage pipeline
 now has its unit tests and smoke integration test passing in Questa. The next
 major milestone is broader pipeline verification before starting the
 out-of-order core.
@@ -25,6 +26,7 @@ rtl/common/                   RTL shared by the single-cycle and pipeline cores
 rtl/single_cycle/             Completed single-cycle top level
 rtl/pipeline/                 Five-stage pipeline RTL and top level
 tb/unit/common/               Tests for shared RTL modules
+tb/unit/single_cycle/         Tests for single-cycle-only execution units
 tb/unit/pipeline/             Tests for pipeline-only modules
 tb/integration/single_cycle/  Single-cycle integration test
 tb/integration/pipeline/      Pipeline integration smoke test
@@ -54,7 +56,8 @@ program. Each script exits with a nonzero result when a test reports an error.
 ## Current Verification Status
 
 - Shared/common unit tests: passing
-- Single-cycle integration smoke test: passing
+- Single-cycle RV32M arithmetic unit test: passing
+- Single-cycle RV32I and RV32M integration tests: passing
 - Pipeline unit tests: passing
 - Pipeline integration smoke test: passing
 - Vivado synthesis/timing: still to be recorded
