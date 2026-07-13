@@ -11,6 +11,7 @@ module decoder_tb #(
     logic [2:0]  branch_op;
     logic [1:0]  wb_sel;
     logic [1:0]  mem_size;
+    muldiv_op_t  muldiv_op;
     logic        reg_write;
     logic        alu_src_imm;
     logic        alu_src_pc;
@@ -19,6 +20,7 @@ module decoder_tb #(
     logic        load_unsigned;
     logic        jump;
     logic        jalr;
+    logic        is_muldiv;
     logic        halt;
     logic        illegal;
 
@@ -160,6 +162,11 @@ module decoder_tb #(
             );
             errors++;
         end
+
+        if (is_muldiv !== 1'b0) begin
+            $error("%s: non-RV32M instruction asserted is_muldiv", test_name);
+            errors++;
+        end
     endtask
 
     task automatic check_alu_imm(
@@ -188,6 +195,37 @@ module decoder_tb #(
         );
     endtask
 
+    task automatic check_muldiv(
+        input string      test_name,
+        input logic [2:0] test_funct3,
+        input muldiv_op_t expected_muldiv_op
+    );
+        instruction = encode_r(7'b0000001, test_funct3);
+        #1;
+        opcode_hits[OP_REG]++;
+        legal_tests++;
+
+        if ((illegal !== 1'b0) ||
+            (reg_write !== 1'b1) ||
+            (is_muldiv !== 1'b1) ||
+            (muldiv_op !== expected_muldiv_op) ||
+            (wb_sel !== WB_ALU) ||
+            (alu_src_imm !== 1'b0) ||
+            (alu_src_pc !== 1'b0) ||
+            (mem_read !== 1'b0) ||
+            (mem_write !== 1'b0) ||
+            (jump !== 1'b0) ||
+            (jalr !== 1'b0) ||
+            (halt !== 1'b0)) begin
+            $error(
+                "%s: funct3=%03b did not produce the expected RV32M controls",
+                test_name,
+                test_funct3
+            );
+            errors++;
+        end
+    endtask
+
     task automatic check_illegal(
         input string       test_name,
         input logic [31:0] test_instruction
@@ -206,6 +244,7 @@ module decoder_tb #(
             (mem_read  !== 1'b0) ||
             (mem_write !== 1'b0) ||
             (jump      !== 1'b0) ||
+            (is_muldiv !== 1'b0) ||
             (halt      !== 1'b0) ||
             (branch_op !== BR_NONE)) begin
             $error("%s: illegal instruction retained an architectural side effect", test_name);
@@ -283,6 +322,17 @@ module decoder_tb #(
         check_alu_reg("OR",   encode_r(7'b0000000, 3'b110), ALU_OR);
         check_alu_reg("AND",  encode_r(7'b0000000, 3'b111), ALU_AND);
 
+        // RV32M register-register instructions. funct7 selects the M extension
+        // and funct3 selects the exact multiply/divide operation.
+        check_muldiv("MUL",    3'b000, MULDIV_MUL);
+        check_muldiv("MULH",   3'b001, MULDIV_MULH);
+        check_muldiv("MULHSU", 3'b010, MULDIV_MULHSU);
+        check_muldiv("MULHU",  3'b011, MULDIV_MULHU);
+        check_muldiv("DIV",    3'b100, MULDIV_DIV);
+        check_muldiv("DIVU",   3'b101, MULDIV_DIVU);
+        check_muldiv("REM",    3'b110, MULDIV_REM);
+        check_muldiv("REMU",   3'b111, MULDIV_REMU);
+
         // FENCE instructions are currently decoded as no-ops.
         check_controls("FENCE",   32'h0000_000f, ALU_ADD, IMM_I, BR_NONE, WB_ALU, MEM_WORD, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
         check_controls("FENCE.I", 32'h0000_100f, ALU_ADD, IMM_I, BR_NONE, WB_ALU, MEM_WORD, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
@@ -300,8 +350,6 @@ module decoder_tb #(
         check_illegal("invalid load funct3", encode_i(12'd0, 3'b011, 7'b0000011));
         check_illegal("invalid store funct3", encode_s(3'b011));
         check_illegal("invalid immediate shift funct7", encode_i({7'b0000001, 5'd0}, 3'b001, 7'b0010011));
-        check_illegal("RV32M multiply unsupported", encode_r(7'b0000001, 3'b000));
-        check_illegal("RV32M multiply-high unsupported", encode_r(7'b0000001, 3'b001));
         check_illegal("invalid FENCE funct3", encode_i(12'd0, 3'b010, 7'b0001111));
         check_illegal("unsupported SYSTEM instruction", 32'h0020_0073);
 
@@ -440,10 +488,10 @@ module decoder_tb #(
 
                 default: begin
                     random_funct3 = $urandom_range(0, 7);
-                    random_funct7 = 7'b0000001;
-                    check_illegal(
-                        $sformatf("random unsupported OP funct7 %0d", i),
-                        encode_r(random_funct7, random_funct3)
+                    check_muldiv(
+                        $sformatf("random RV32M operation %0d", i),
+                        random_funct3,
+                        muldiv_op_t'(random_funct3)
                     );
                 end
             endcase

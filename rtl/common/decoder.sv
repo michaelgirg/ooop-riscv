@@ -22,6 +22,7 @@ module decoder (
     output logic [2:0] branch_op,  // Comparison performed by branch_unit
     output logic [1:0] wb_sel,     // Value selected for register writeback
     output logic [1:0] mem_size,   // Byte, halfword, or word memory access
+    output rv32i_pkg::muldiv_op_t muldiv_op,
 
     output logic reg_write,
     output logic alu_src_imm,    // Selects the immediate instead of rs2
@@ -31,6 +32,7 @@ module decoder (
     output logic load_unsigned,
     output logic jump,
     output logic jalr,
+    output logic is_muldiv,
     output logic halt,
     output logic illegal
 );
@@ -51,6 +53,7 @@ module decoder (
         branch_op     = BR_NONE;
         wb_sel        = WB_ALU;
         mem_size      = MEM_WORD;
+        muldiv_op     = MULDIV_MUL;
 
         reg_write     = 1'b0;
         alu_src_imm   = 1'b0;
@@ -60,6 +63,7 @@ module decoder (
         load_unsigned = 1'b0;
         jump          = 1'b0;
         jalr          = 1'b0;
+        is_muldiv     = 1'b0;
         halt          = 1'b0;
         illegal       = 1'b0;
 
@@ -200,7 +204,14 @@ module decoder (
             OP_REG: begin
                 reg_write = 1'b1;
 
-                case (funct3)
+                if (funct7 == 7'b0000001) begin
+                    // All eight funct3 values are defined by RV32M. The
+                    // execute unit uses muldiv_op to select multiply, divide,
+                    // or remainder behavior.
+                    is_muldiv = 1'b1;
+                    muldiv_op = muldiv_op_t'(funct3);
+                end else begin
+                    case (funct3)
                     3'b000: begin
                         if (funct7 == 7'b0000000) begin
                             alu_op = ALU_ADD;
@@ -265,6 +276,7 @@ module decoder (
 
                     default: illegal = 1'b1;
                 endcase
+                end
             end
 
             OP_FENCE: begin
@@ -305,6 +317,7 @@ module decoder (
             mem_read  = 1'b0;
             mem_write = 1'b0;
             jump      = 1'b0;
+            is_muldiv = 1'b0;
             halt      = 1'b0;
             branch_op = BR_NONE;
         end

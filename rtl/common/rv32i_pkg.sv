@@ -48,6 +48,20 @@ package rv32i_pkg;
         MEM_WORD = 2'd2
     } mem_size_t;
 
+    // RV32M operation encoding. These values intentionally match funct3 so
+    // the decoder can carry the instruction's operation directly into the
+    // multiply/divide execute unit.
+    typedef enum logic [2:0] {
+        MULDIV_MUL    = 3'b000,
+        MULDIV_MULH   = 3'b001,
+        MULDIV_MULHSU = 3'b010,
+        MULDIV_MULHU  = 3'b011,
+        MULDIV_DIV    = 3'b100,
+        MULDIV_DIVU   = 3'b101,
+        MULDIV_REM    = 3'b110,
+        MULDIV_REMU   = 3'b111
+    } muldiv_op_t;
+
     // RV32I funct3 encodings used by the data memory.
     localparam logic [2:0] LOAD_BYTE = 3'b000;
     localparam logic [2:0] LOAD_HALF = 3'b001;
@@ -114,6 +128,7 @@ package rv32i_pkg;
 
         // Decoded operation selections.
         alu_op_t     alu_op;
+        muldiv_op_t  muldiv_op;
         branch_op_t  branch_op;
         wb_sel_t     wb_sel;
         mem_size_t   mem_size;
@@ -121,6 +136,7 @@ package rv32i_pkg;
         // Datapath controls.
         logic        alu_src_imm;
         logic        alu_src_pc;
+        logic        is_muldiv;
 
         // Register and memory side-effect controls.
         logic        reg_write;
