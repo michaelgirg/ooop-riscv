@@ -18,6 +18,9 @@ vsim.wlf
 *.xpr
 vivado*.jou
 vivado*.log
+synth/vivado/build/
+synth/vivado/dfx_runtime.txt
+/dfx_runtime.txt
 
 # Generated simulation and memory files
 results/
