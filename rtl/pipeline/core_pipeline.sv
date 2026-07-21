@@ -155,7 +155,9 @@ module core_pipeline #(
     logic           flush_if_id;
     logic           flush_id_ex;
     logic           stall_id_ex;
+    logic           stall_ex_mem;
     logic           flush_ex_mem;
+    logic           mem_stall;
 
     // ------------------------------------------------------------------------
     // Debug outputs
@@ -453,7 +455,7 @@ module core_pipeline #(
     ex_mem_reg u_ex_mem_reg (
         .clk   (clk_i),
         .rst   (rst_i),
-        .en    (1'b1),
+        .en    (!stall_ex_mem),
         .flush (flush_ex_mem),
         .data  (ex_mem_d),
         .data_o(ex_mem_q)
@@ -463,11 +465,17 @@ module core_pipeline #(
     // Pipeline control
     // ------------------------------------------------------------------------
 
+    // The current core still uses single-cycle dmem, so MEM never stalls. The
+    // D-cache integration will replace this tie-off with "request pending and
+    // no response" from the cache controller.
+    assign mem_stall = 1'b0;
+
     pipeline_control u_pipeline_control (
         .ex_redirect   (ex_redirect),
         .ex_target     (ex_target),
         .load_use_stall(load_use_stall),
         .muldiv_stall  (muldiv_stall),
+        .mem_stall     (mem_stall),
         .trap_req      (1'b0),
         .trap_target   (32'b0),
         .pc_redirect   (pc_redirect),
@@ -477,6 +485,7 @@ module core_pipeline #(
         .flush_if_id   (flush_if_id),
         .flush_id_ex   (flush_id_ex),
         .stall_id_ex   (stall_id_ex),
+        .stall_ex_mem  (stall_ex_mem),
         .flush_ex_mem  (flush_ex_mem)
     );
 
