@@ -72,6 +72,7 @@ module core_pipeline #(
     logic    [ 2:0] branch_op;
     logic    [ 1:0] wb_sel;
     logic    [ 1:0] mem_size;
+    muldiv_op_t     decode_muldiv_op;
 
     logic           reg_write;
     logic           alu_src_imm;
@@ -81,6 +82,7 @@ module core_pipeline #(
     logic           load_unsigned;
     logic           jump;
     logic           jalr;
+    logic           decode_is_muldiv;
     logic           halt;
     logic           illegal;
 
@@ -100,6 +102,13 @@ module core_pipeline #(
     logic    [31:0] alu_operand_a;
     logic    [31:0] alu_operand_b;
     logic    [31:0] alu_result;
+    logic    [31:0] ex_result;
+
+    logic           muldiv_active;
+    logic           muldiv_stall;
+    logic           muldiv_busy;
+    logic           muldiv_done;
+    logic    [31:0] muldiv_result;
 
     logic           branch_taken;
     logic           ex_redirect;
@@ -144,6 +153,8 @@ module core_pipeline #(
     logic           stall_if_id;
     logic           flush_if_id;
     logic           flush_id_ex;
+    logic           stall_id_ex;
+    logic           flush_ex_mem;
 
     // ------------------------------------------------------------------------
     // Debug outputs
@@ -220,6 +231,7 @@ module core_pipeline #(
         .branch_op    (branch_op),
         .wb_sel       (wb_sel),
         .mem_size     (mem_size),
+        .muldiv_op    (decode_muldiv_op),
         .reg_write    (reg_write),
         .alu_src_imm  (alu_src_imm),
         .alu_src_pc   (alu_src_pc),
@@ -228,6 +240,7 @@ module core_pipeline #(
         .load_unsigned(load_unsigned),
         .jump         (jump),
         .jalr         (jalr),
+        .is_muldiv    (decode_is_muldiv),
         .halt         (halt),
         .illegal      (illegal)
     );
@@ -280,12 +293,14 @@ module core_pipeline #(
             id_ex_d.immediate = immediate;
 
             id_ex_d.alu_op = alu_op_t'(alu_op);
+            id_ex_d.muldiv_op = decode_muldiv_op;
             id_ex_d.branch_op = branch_op_t'(branch_op);
             id_ex_d.wb_sel = wb_sel_t'(wb_sel);
             id_ex_d.mem_size = mem_size_t'(mem_size);
 
             id_ex_d.alu_src_imm = alu_src_imm;
             id_ex_d.alu_src_pc = alu_src_pc;
+            id_ex_d.is_muldiv = decode_is_muldiv;
 
             id_ex_d.reg_write = reg_write;
             id_ex_d.mem_read = mem_read;
@@ -303,7 +318,7 @@ module core_pipeline #(
     id_ex_reg u_id_ex_reg (
         .clk   (clk_i),
         .rst   (rst_i),
-        .en    (1'b1),
+        .en    (!stall_id_ex),
         .flush (flush_id_ex),
         .data  (id_ex_d),
         .data_o(id_ex_q)
@@ -366,6 +381,31 @@ module core_pipeline #(
         .zero  ()
     );
 
+    // Multi-cycle MUL/DIV unit shares the EX operands with the ALU. It latches
+    // its operands on the start pulse it generates internally, so later changes
+    // to the forwarded values while the op is stalled in EX do not disturb it.
+    assign muldiv_active = id_ex_q.valid && id_ex_q.is_muldiv;
+
+    muldiv_unit u_muldiv_unit (
+        .clk     (clk_i),
+        .rst     (rst_i),
+        .in_valid(muldiv_active),
+        .funct3  (id_ex_q.muldiv_op),
+        .rs1_data(forwarded_rs1_data),
+        .rs2_data(forwarded_rs2_data),
+        .result  (muldiv_result),
+        .busy    (muldiv_busy),
+        .done    (muldiv_done)
+    );
+
+    // Stall the pipeline while a muldiv op is in EX and has not yet produced a
+    // result. On the done cycle the stall drops and the result advances.
+    assign muldiv_stall = muldiv_active && !muldiv_done;
+
+    // EX result feeding EX/MEM: the muldiv result replaces the ALU result for
+    // M-extension ops, writing back through the normal WB_ALU path.
+    assign ex_result = id_ex_q.is_muldiv ? muldiv_result : alu_result;
+
     branch_unit u_branch_unit (
         .rs1_data    (forwarded_rs1_data),
         .rs2_data    (forwarded_rs2_data),
@@ -387,7 +427,7 @@ module core_pipeline #(
 
             ex_mem_d.pc = id_ex_q.pc;
             ex_mem_d.pc_plus_four = id_ex_q.pc_plus_four;
-            ex_mem_d.alu_result = alu_result;
+            ex_mem_d.alu_result = ex_result;
             ex_mem_d.store_data = forwarded_rs2_data;
             ex_mem_d.rd_addr = id_ex_q.rd_addr;
 
@@ -410,7 +450,7 @@ module core_pipeline #(
         .clk   (clk_i),
         .rst   (rst_i),
         .en    (1'b1),
-        .flush (1'b0),
+        .flush (flush_ex_mem),
         .data  (ex_mem_d),
         .data_o(ex_mem_q)
     );
@@ -423,6 +463,7 @@ module core_pipeline #(
         .ex_redirect   (ex_redirect),
         .ex_target     (ex_target),
         .load_use_stall(load_use_stall),
+        .muldiv_stall  (muldiv_stall),
         .trap_req      (1'b0),
         .trap_target   (32'b0),
         .pc_redirect   (pc_redirect),
@@ -430,7 +471,9 @@ module core_pipeline #(
         .pc_stall      (pc_stall),
         .stall_if_id   (stall_if_id),
         .flush_if_id   (flush_if_id),
-        .flush_id_ex   (flush_id_ex)
+        .flush_id_ex   (flush_id_ex),
+        .stall_id_ex   (stall_id_ex),
+        .flush_ex_mem  (flush_ex_mem)
     );
 
     // ------------------------------------------------------------------------

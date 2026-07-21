@@ -26,6 +26,9 @@ module pipeline_control (
   // ---- load-use hazard (from load_use_hazard_unit) --------------------------
   input  logic        load_use_stall,
 
+  // ---- multi-cycle EX op (from muldiv_unit) ---------------------------------
+  input  logic        muldiv_stall,   // MUL/DIV still computing in EX
+
   // ---- trap / fault (v1 aggregate; refine with the CSR module) --------------
   input  logic        trap_req,       // exception detected this cycle
   input  logic [31:0] trap_target,    // mtvec base (stub until CSRs land)
@@ -33,21 +36,25 @@ module pipeline_control (
   // ---- to PC / fetch --------------------------------------------------------
   output logic        pc_redirect,    // override sequential PC with pc_target
   output logic [31:0] pc_target,
-  output logic        pc_stall,       // hold PC (load-use)
+  output logic        pc_stall,       // hold PC (load-use / muldiv)
 
   // ---- to pipeline registers ------------------------------------------------
-  output logic        stall_if_id,    // hold IF/ID  (load-use)
+  output logic        stall_if_id,    // hold IF/ID  (load-use / muldiv)
   output logic        flush_if_id,    // bubble IF/ID (redirect/trap)
-  output logic        flush_id_ex     // bubble ID/EX (redirect / load-use bubble / trap)
+  output logic        flush_id_ex,    // bubble ID/EX (redirect / load-use bubble / trap)
+  output logic        stall_id_ex,    // hold ID/EX  (muldiv: keep the op in EX)
+  output logic        flush_ex_mem    // bubble EX/MEM (muldiv: no result yet)
 );
   always_comb begin
     // defaults: pipeline advances normally
-    pc_redirect = 1'b0;
-    pc_target   = 32'b0;
-    pc_stall    = 1'b0;
-    stall_if_id = 1'b0;
-    flush_if_id = 1'b0;
-    flush_id_ex = 1'b0;
+    pc_redirect  = 1'b0;
+    pc_target    = 32'b0;
+    pc_stall     = 1'b0;
+    stall_if_id  = 1'b0;
+    flush_if_id  = 1'b0;
+    flush_id_ex  = 1'b0;
+    stall_id_ex  = 1'b0;
+    flush_ex_mem = 1'b0;
 
     if (trap_req) begin
       // Redirect to the trap vector and squash the front of the pipe.
@@ -72,6 +79,16 @@ module pipeline_control (
       pc_stall    = 1'b1;
       stall_if_id = 1'b1;
       flush_id_ex = 1'b1;
+    end
+    else if (muldiv_stall) begin
+      // Multi-cycle EX op (MUL/DIV) still computing: freeze the front of the
+      // pipe and HOLD the op in ID/EX (do not bubble it), while draining
+      // EX/MEM with a bubble so the unfinished result never advances to MEM.
+      // (load_use_stall cannot be active here: EX holds a muldiv, not a load.)
+      pc_stall     = 1'b1;
+      stall_if_id  = 1'b1;
+      stall_id_ex  = 1'b1;
+      flush_ex_mem = 1'b1;
     end
   end
 endmodule
