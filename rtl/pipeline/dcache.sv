@@ -127,7 +127,7 @@ module dcache #(
     logic                  req_fault;
 
     set_index_t req_set;
-    way_index_t req_word_offset;
+    logic [WORD_OFFSET_BITS-1:0] req_word_offset;
     logic [BYTE_OFFSET_BITS-1:0] req_byte_offset;
     tag_t req_tag;
 
