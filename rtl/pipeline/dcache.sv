@@ -514,12 +514,25 @@ module dcache #(
                                    v
                               CACHE_IDLE
 
-        CACHE_IDLE accepts and saves one CPU load or store request.
-        CACHE_LOOKUP checks for a request fault, hit, or miss.
-        CACHE_WRITEBACK sends a dirty victim line to backing memory.
-        CACHE_REFILL_REQUEST asks memory for the requested cache line.
-        CACHE_REFILL_WAIT waits until memory returns that complete line.
-        CACHE_RESPONSE holds the result until the CPU accepts it.
+        
+        
+        
+        CACHE_IDLE:
+            Waits for a new CPU load or store request.
+
+        CACHE_LOOKUP:
+            Examines the saved CPU request and determines whether the access is faulty,
+            a cache hit, or a cache miss.
+        
+        CACHE_WRITEBACK:
+            Used only on a cache miss when the selected victim line is dirty.
+            The cache writes the old dirty line back to memory before replacing it.
+        
+        CACHE_REFILL_REQUEST:
+            Sends a memory read request for the cache line containing the CPU’s requested address.
+        
+        CACHE_REFILL_WAIT:
+            Waits for memory to return the requested cache line after the refill request has been accepted.
     */
 
 
