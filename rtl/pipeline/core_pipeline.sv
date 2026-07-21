@@ -106,6 +106,7 @@ module core_pipeline #(
 
     logic           muldiv_active;
     logic           muldiv_stall;
+    logic           muldiv_result_ready;
     logic           muldiv_busy;
     logic           muldiv_done;
     logic    [31:0] muldiv_result;
@@ -381,10 +382,12 @@ module core_pipeline #(
         .zero  ()
     );
 
-    // Multi-cycle MUL/DIV unit shares the EX operands with the ALU. It latches
-    // its operands on the start pulse it generates internally, so later changes
-    // to the forwarded values while the op is stalled in EX do not disturb it.
+    // Multi-cycle MUL/DIV shares the forwarded EX operands with the ALU. A
+    // completed result is accepted only when ID/EX can advance. A future cache
+    // miss must assert stall_id_ex; the wrapper will then hold its result and
+    // will not reissue the instruction while MEM is back-pressured.
     assign muldiv_active = id_ex_q.valid && id_ex_q.is_muldiv;
+    assign muldiv_result_ready = !stall_id_ex;
 
     muldiv_unit u_muldiv_unit (
         .clk     (clk_i),
@@ -393,6 +396,7 @@ module core_pipeline #(
         .funct3  (id_ex_q.muldiv_op),
         .rs1_data(forwarded_rs1_data),
         .rs2_data(forwarded_rs2_data),
+        .result_ready(muldiv_result_ready),
         .result  (muldiv_result),
         .busy    (muldiv_busy),
         .done    (muldiv_done)

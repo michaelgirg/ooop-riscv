@@ -5,9 +5,10 @@ import rv32i_pkg::*;
 // Sits in the EX stage next to the ALU. When a MUL/DIV-class instruction is in
 // EX, this unit runs the operation over one or more cycles and raises `busy`,
 // which the core turns into a pipeline stall (freeze PC / IF-ID, hold ID-EX,
-// bubble EX/MEM) until `done`. On `done`, `result` is muxed into the EX result
-// that feeds ex_mem.alu_result, so the value writes back through the normal
-// WB_ALU path - no new writeback source is needed.
+// bubble EX/MEM) until `done`. The completed result remains valid until
+// `result_ready` says EX/MEM accepted it. This matters when a future cache miss
+// holds the pipeline after the arithmetic has finished. The result writes back
+// through the normal WB_ALU path, so no new writeback source is needed.
 //
 // funct3 selects the operation; funct3[2] splits the two sub-units:
 //   funct3[2] == 0 -> mul_unit  (MUL, MULH, MULHSU, MULHU)
@@ -15,8 +16,10 @@ import rv32i_pkg::*;
 //
 // Single-issue: this unit handles one op at a time. `in_valid` stays high for
 // the whole time the op is held (stalled) in EX, so a private `running` flag,
-// not `in_valid`, gates `start`. Exactly one `start` pulse is issued when the
-// op is first seen; the flag clears when the selected sub-unit reports done.
+// not `in_valid`, gates `start`. A second flag holds a completed result that EX
+// could not accept. Together they guarantee exactly one start pulse for the
+// instruction, even if memory back-pressure keeps that instruction in EX after
+// the selected sub-unit finishes.
 
 module muldiv_unit (
     input  logic        clk,
@@ -26,19 +29,23 @@ module muldiv_unit (
     input  logic [ 2:0] funct3,     // selects one of the 8 RV32M ops
     input  logic [31:0] rs1_data,   // already-forwarded EX operand a
     input  logic [31:0] rs2_data,   // already-forwarded EX operand b
+    input  logic        result_ready, // EX/MEM can accept the completed result
 
     output logic [31:0] result,
-    output logic        busy,       // -> pipeline stall while high
-    output logic        done        // 1-cycle pulse: result valid this cycle
+    output logic        busy,       // operation running or result waiting
+    output logic        done        // result is valid; may remain high
 );
 
     // running = an operation has been started and has not yet reported done.
     logic running;
     logic sel_div_q;   // which sub-unit the in-flight op was routed to
+    logic result_valid_q;
+    logic [31:0] result_held_q;
 
-    // Issue a single start pulse the cycle a new op is first seen in EX.
+    // Do not issue while a previous result is waiting for EX/MEM. Without this
+    // guard, a cache stall could make the completed instruction start again.
     logic issue;
-    assign issue = in_valid && !running;
+    assign issue = in_valid && !running && !result_valid_q;
 
     // Sub-unit request strobes (one-cycle pulses).
     logic mul_start;
@@ -84,27 +91,45 @@ module muldiv_unit (
 
     // Select the active sub-unit's completion and result.
     logic        sub_done;
+    logic        completion;
     logic [31:0] sub_result;
     assign sub_done   = sel_div_q ? div_done   : mul_done;
     assign sub_result = sel_div_q ? div_result : mul_result;
+    assign completion = running && sub_done;
 
-    // Present a stable busy across the accept cycle and the whole run, and a
-    // one-cycle done aligned with the valid result.
-    assign busy   = running || issue;
-    assign done   = running && sub_done;
-    assign result = sub_result;
+    // A result can be consumed directly on the sub-unit's completion cycle. If
+    // EX/MEM is blocked, save it and keep done asserted until result_ready.
+    assign busy   = running || issue || result_valid_q;
+    assign done   = completion || result_valid_q;
+    assign result = result_valid_q ? result_held_q : sub_result;
 
     always_ff @(posedge clk) begin
         if (rst) begin
-            running   <= 1'b0;
-            sel_div_q <= 1'b0;
+            running        <= 1'b0;
+            sel_div_q      <= 1'b0;
+            result_valid_q <= 1'b0;
+            result_held_q  <= '0;
         end
-        else if (issue) begin
-            running   <= 1'b1;
-            sel_div_q <= funct3[2];
-        end
-        else if (running && sub_done) begin
-            running   <= 1'b0;
+        else begin
+            if (issue) begin
+                running   <= 1'b1;
+                sel_div_q <= funct3[2];
+            end
+            else if (completion) begin
+                running <= 1'b0;
+            end
+
+            if (completion && !result_ready) begin
+                // The producer is done, but EX cannot advance. Save the value
+                // because the sub-unit's done pulse disappears next cycle.
+                result_valid_q <= 1'b1;
+                result_held_q  <= sub_result;
+            end
+            else if (result_valid_q && result_ready) begin
+                // EX/MEM accepted the held result and this instruction may
+                // finally leave the Execute stage.
+                result_valid_q <= 1'b0;
+            end
         end
     end
 
