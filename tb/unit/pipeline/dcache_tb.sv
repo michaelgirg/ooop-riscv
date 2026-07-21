@@ -1,12 +1,12 @@
 `timescale 1ns/1ps
 
 module dcache_tb #(
-    parameter int NUM_RANDOM_TESTS = 1000
+    parameter int NUM_RANDOM_TESTS = 1000,
+    parameter int NUM_WAYS         = 2
 );
     localparam int ADDR_WIDTH = 32;
     localparam int DATA_WIDTH = 32;
     localparam int NUM_SETS   = 4;
-    localparam int NUM_WAYS   = 2;
     localparam int LINE_WORDS = 4;
     localparam int LINE_BYTES = LINE_WORDS * (DATA_WIDTH / 8);
     localparam int LINE_BITS  = LINE_WORDS * DATA_WIDTH;
@@ -686,59 +686,64 @@ module dcache_tb #(
             errors++;
         end
 
-        // Addresses separated by NUM_SETS * LINE_BYTES map to the same set.
-        // Accessing A after filling A and B makes B the PLRU victim for C.
-        reset_environment();
+        // These directed replacement sequences intentionally describe a 2-way
+        // set. Wider configurations still run all protocol, formatting, fault,
+        // and randomized memory-model checks below.
+        if (NUM_WAYS == 2) begin
+            // Addresses separated by NUM_SETS * LINE_BYTES map to the same set.
+            // Accessing A after filling A and B makes B the PLRU victim for C.
+            reset_environment();
 
-        check_access("PLRU fill A", 1'b0, 32'h0000_0000, '0, 3'b010,
-                     reference_load(32'h0000_0000, 3'b010),
-                     1'b0, 1'b1, 1'b0);
-        check_access("PLRU fill B", 1'b0, 32'h0000_0040, '0, 3'b010,
-                     reference_load(32'h0000_0040, 3'b010),
-                     1'b0, 1'b1, 1'b0);
-        check_access("PLRU touch A", 1'b0, 32'h0000_0000, '0, 3'b010,
-                     reference_load(32'h0000_0000, 3'b010),
-                     1'b1, 1'b0, 1'b0);
-        check_access("PLRU replace B with C", 1'b0, 32'h0000_0080, '0, 3'b010,
-                     reference_load(32'h0000_0080, 3'b010),
-                     1'b0, 1'b1, 1'b0);
-        check_access("PLRU A survives", 1'b0, 32'h0000_0000, '0, 3'b010,
-                     reference_load(32'h0000_0000, 3'b010),
-                     1'b1, 1'b0, 1'b0);
-        check_access("PLRU B was evicted", 1'b0, 32'h0000_0040, '0, 3'b010,
-                     reference_load(32'h0000_0040, 3'b010),
-                     1'b0, 1'b1, 1'b0);
+            check_access("PLRU fill A", 1'b0, 32'h0000_0000, '0, 3'b010,
+                         reference_load(32'h0000_0000, 3'b010),
+                         1'b0, 1'b1, 1'b0);
+            check_access("PLRU fill B", 1'b0, 32'h0000_0040, '0, 3'b010,
+                         reference_load(32'h0000_0040, 3'b010),
+                         1'b0, 1'b1, 1'b0);
+            check_access("PLRU touch A", 1'b0, 32'h0000_0000, '0, 3'b010,
+                         reference_load(32'h0000_0000, 3'b010),
+                         1'b1, 1'b0, 1'b0);
+            check_access("PLRU replace B with C", 1'b0, 32'h0000_0080, '0, 3'b010,
+                         reference_load(32'h0000_0080, 3'b010),
+                         1'b0, 1'b1, 1'b0);
+            check_access("PLRU A survives", 1'b0, 32'h0000_0000, '0, 3'b010,
+                         reference_load(32'h0000_0000, 3'b010),
+                         1'b1, 1'b0, 1'b0);
+            check_access("PLRU B was evicted", 1'b0, 32'h0000_0040, '0, 3'b010,
+                         reference_load(32'h0000_0040, 3'b010),
+                         1'b0, 1'b1, 1'b0);
 
-        // Dirty victim must be written back before the incoming line refills.
-        reset_environment();
+            // Dirty victim must be written back before the incoming line refills.
+            reset_environment();
 
-        check_access("dirty fill D", 1'b1, 32'h0000_0100,
-                     32'h1122_3344, 3'b010, 32'b0,
-                     1'b0, 1'b1, 1'b0);
-        reference_store(32'h0000_0100, 3'b010, 32'h1122_3344);
+            check_access("dirty fill D", 1'b1, 32'h0000_0100,
+                         32'h1122_3344, 3'b010, 32'b0,
+                         1'b0, 1'b1, 1'b0);
+            reference_store(32'h0000_0100, 3'b010, 32'h1122_3344);
 
-        check_access("clean fill E", 1'b0, 32'h0000_0140, '0, 3'b010,
-                     reference_load(32'h0000_0140, 3'b010),
-                     1'b0, 1'b1, 1'b0);
+            check_access("clean fill E", 1'b0, 32'h0000_0140, '0, 3'b010,
+                         reference_load(32'h0000_0140, 3'b010),
+                         1'b0, 1'b1, 1'b0);
 
-        check_access("dirty eviction by F", 1'b0, 32'h0000_0180, '0, 3'b010,
-                     reference_load(32'h0000_0180, 3'b010),
-                     1'b0, 1'b1, 1'b0);
+            check_access("dirty eviction by F", 1'b0, 32'h0000_0180, '0, 3'b010,
+                         reference_load(32'h0000_0180, 3'b010),
+                         1'b0, 1'b1, 1'b0);
 
-        tests++;
-        if ((memory_write_requests !== 1) ||
-            (backing_memory[32'h100 >> 2] !== 32'h1122_3344)) begin
-            $error(
-                "Dirty eviction failed: writes=%0d backing=%08h",
-                memory_write_requests,
-                backing_memory[32'h100 >> 2]
-            );
-            errors++;
+            tests++;
+            if ((memory_write_requests !== 1) ||
+                (backing_memory[32'h100 >> 2] !== 32'h1122_3344)) begin
+                $error(
+                    "Dirty eviction failed: writes=%0d backing=%08h",
+                    memory_write_requests,
+                    backing_memory[32'h100 >> 2]
+                );
+                errors++;
+            end
+
+            check_access("reload written-back D", 1'b0, 32'h0000_0100, '0, 3'b010,
+                         32'h1122_3344,
+                         1'b0, 1'b1, 1'b0);
         end
-
-        check_access("reload written-back D", 1'b0, 32'h0000_0100, '0, 3'b010,
-                     32'h1122_3344,
-                     1'b0, 1'b1, 1'b0);
 
         // Malformed or misaligned requests fail without accessing memory.
         reset_environment();
@@ -882,7 +887,8 @@ module dcache_tb #(
 
         if (errors == 0)
             $display(
-                "PASS: dcache_tb (%0d checks, %0d random requests)",
+                "PASS: dcache_tb (%0d-way, %0d checks, %0d random requests)",
+                NUM_WAYS,
                 tests,
                 NUM_RANDOM_TESTS
             );
