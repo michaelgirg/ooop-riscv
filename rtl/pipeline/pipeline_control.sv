@@ -14,9 +14,11 @@
 // standard 2-cycle penalty. (Resolving JAL in ID would cut it to 1 cycle; left
 // as a later optimization.)
 //
-// Priority:  trap  >  taken branch/jump  >  load-use stall
+// Priority:  trap > MEM stall > taken branch/jump > load-use > MUL/DIV stall
 //   - trap outranks a branch: an exception on the older instruction wins.
-//   - a redirect outranks a stall: the stalled slots are on the wrong path.
+//   - a MEM stall holds the older EX/MEM instruction, so younger EX work cannot
+//     advance or redirect until the cache transaction completes.
+//   - redirects outrank front-end and EX-only stalls once MEM can advance.
 // =============================================================================
 module pipeline_control (
   // ---- control-transfer resolution (from EX / partner's branch logic) -------
@@ -28,6 +30,9 @@ module pipeline_control (
 
   // ---- multi-cycle EX op (from muldiv_unit) ---------------------------------
   input  logic        muldiv_stall,   // MUL/DIV still computing in EX
+
+  // ---- variable-latency MEM op (from D-cache integration) -------------------
+  input  logic        mem_stall,      // request in EX/MEM has no response yet
 
   // ---- trap / fault (v1 aggregate; refine with the CSR module) --------------
   input  logic        trap_req,       // exception detected this cycle
@@ -43,6 +48,7 @@ module pipeline_control (
   output logic        flush_if_id,    // bubble IF/ID (redirect/trap)
   output logic        flush_id_ex,    // bubble ID/EX (redirect / load-use bubble / trap)
   output logic        stall_id_ex,    // hold ID/EX  (muldiv: keep the op in EX)
+  output logic        stall_ex_mem,   // hold EX/MEM (D-cache request in flight)
   output logic        flush_ex_mem    // bubble EX/MEM (muldiv: no result yet)
 );
   always_comb begin
@@ -54,6 +60,7 @@ module pipeline_control (
     flush_if_id  = 1'b0;
     flush_id_ex  = 1'b0;
     stall_id_ex  = 1'b0;
+    stall_ex_mem = 1'b0;
     flush_ex_mem = 1'b0;
 
     if (trap_req) begin
@@ -65,6 +72,15 @@ module pipeline_control (
       pc_target   = trap_target;
       flush_if_id = 1'b1;
       flush_id_ex = 1'b1;
+    end
+    else if (mem_stall) begin
+      // The oldest active instruction is waiting in MEM. Hold it in EX/MEM and
+      // freeze every younger stage. MEM/WB is allowed to drain separately; the
+      // cache integration must present a bubble there until a response arrives.
+      pc_stall     = 1'b1;
+      stall_if_id  = 1'b1;
+      stall_id_ex  = 1'b1;
+      stall_ex_mem = 1'b1;
     end
     else if (ex_redirect) begin
       // Taken branch/jump in EX: redirect fetch, kill the two wrong-path

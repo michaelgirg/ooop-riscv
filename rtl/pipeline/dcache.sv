@@ -170,7 +170,7 @@ module dcache #(
         is_power_of_two = (value > 0) && ((value & (value - 1)) == 0);
     endfunction
 
-    //checks wether the CPU funct3 represents a legal load or store operations supported by the cache
+    // Check whether funct3 represents a legal RV32 load or store operation.
     function automatic logic encoding_valid(
         input logic       write_request,
         input logic [2:0] funct3
@@ -199,7 +199,7 @@ module dcache #(
         end
     endfunction
 
-    //Checks wether the mem addr is properly aligned for the rquested byte, halfword, or word operation. 
+    // Check address alignment for the requested byte, halfword, or word access.
     function automatic logic address_aligned(
         input logic [ADDR_WIDTH-1:0] address,
         input logic [2:0]            funct3
@@ -493,41 +493,46 @@ module dcache #(
     end
 
     /*
-            Accept CPU request
-                    ↓
-            Check for fault and cache hit
-                    ↓
-        If miss, possibly write back dirty victim
-                    ↓
-            Request new line from memory
-                    ↓
-            Install returned line
-                    ↓
-                Respond to CPU
+        CACHE_IDLE
+            |
+            v
+        CACHE_LOOKUP -- fault or hit --------------------> CACHE_RESPONSE
+            |
+            +-- clean miss --> CACHE_REFILL_REQUEST
+            |
+            +-- dirty miss --> CACHE_WRITEBACK
+                                   |
+                                   v
+                              CACHE_REFILL_REQUEST
+                                   |
+                                   v
+                              CACHE_REFILL_WAIT
+                                   |
+                                   v
+                              CACHE_RESPONSE
+                                   |
+                                   v
+                              CACHE_IDLE
 
-
-                CACHE_IDLE
-                    ↓
-                CACHE_LOOKUP
-                    ├── fault ──────────────────────→ CACHE_RESPONSE
-                    ├── hit ────────────────────────→ CACHE_RESPONSE
-                    └── miss
-                        ├── dirty victim → CACHE_WRITEBACK
-                        │                       ↓
-                        └── clean victim → CACHE_REFILL_REQUEST
-                                                    ↓
-                                            CACHE_REFILL_WAIT
-                                                    ↓
-                                            CACHE_RESPONSE
-                                                    ↓
-                                                CACHE_IDLE
         
-        CACHE_IDLE: Waits for a new CPU load or store request
-        CACHE_LOOKUP: Examines the save CPU request to determine if its 1 of 3 things faulty, hit, or miss 
-        CACHE_WRITEBACK: Only when we miss and cache selectrs a victim line that is dirty (we have to write this dirty old line to mem before replacing it)
-        CACHE_REFILL_REQUEST: Asks memory for the cache line containing the CPU's requested address 
-        CPU_REFILL_WAIT: The mem accepted the read request and we are just waiting for mem to return the actual cache line
-        CPU_RESPONSE: Holds the completed result for the CPU (wait till the CPU accepts the result ) 
+        
+        
+        CACHE_IDLE:
+            Waits for a new CPU load or store request.
+
+        CACHE_LOOKUP:
+            Examines the saved CPU request and determines whether the access is faulty,
+            a cache hit, or a cache miss.
+        
+        CACHE_WRITEBACK:
+            Used only on a cache miss when the selected victim line is dirty.
+            The cache writes the old dirty line back to memory before replacing it.
+        
+        CACHE_REFILL_REQUEST:
+            Sends a memory read request for the cache line containing the CPU’s requested address.
+        
+        CACHE_REFILL_WAIT:
+            Waits for memory to return the requested cache line after the refill request has been accepted.
     */
 
 

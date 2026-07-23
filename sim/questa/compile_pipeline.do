@@ -52,6 +52,7 @@ vlog -work $work_lib -sv ../../tb/unit/pipeline/load_use_hazard_unit_tb.sv
 vlog -work $work_lib -sv ../../tb/unit/pipeline/pipeline_control_tb.sv
 vlog -work $work_lib -sv ../../tb/unit/pipeline/mul_unit_tb.sv
 vlog -work $work_lib -sv ../../tb/unit/pipeline/div_unit_tb.sv
+vlog -work $work_lib -sv ../../tb/unit/pipeline/muldiv_unit_tb.sv
 vlog -work $work_lib -sv ../../tb/unit/pipeline/plru_tb.sv
 vlog -work $work_lib -sv ../../tb/unit/pipeline/dcache_tb.sv
 vlog -work $work_lib -sv ../../tb/unit/pipeline/icache_tb.sv

@@ -58,6 +58,12 @@ Learning tags:
 16. **Trace-driven cache model first** `[wknd]` `(L2)`
     Simulate cache choices in Python or C before committing to RTL.
 
+### Cache Integration Rule
+
+When a D-cache miss back-pressures MEM, hold `EX/MEM`, `ID/EX`, and the front of
+the pipeline. A completed MUL/DIV result must remain valid until EX/MEM accepts
+it; do not allow the held instruction to reissue after the unit finishes.
+
 ## ISA Extensions
 
 17. **M extension** `[1wk]` `(L3)`
