@@ -40,6 +40,7 @@ vlog -work $work_lib -sv ../../rtl/pipeline/div_unit.sv
 vlog -work $work_lib -sv ../../rtl/pipeline/muldiv_unit.sv
 vlog -work $work_lib -sv ../../rtl/pipeline/plru.sv
 vlog -work $work_lib -sv ../../rtl/pipeline/dcache.sv
+vlog -work $work_lib -sv ../../rtl/pipeline/icache.sv
 
 # Pipeline unit tests for completed modules.
 vlog -work $work_lib -sv ../../tb/unit/pipeline/if_id_reg_tb.sv
@@ -53,6 +54,7 @@ vlog -work $work_lib -sv ../../tb/unit/pipeline/mul_unit_tb.sv
 vlog -work $work_lib -sv ../../tb/unit/pipeline/div_unit_tb.sv
 vlog -work $work_lib -sv ../../tb/unit/pipeline/plru_tb.sv
 vlog -work $work_lib -sv ../../tb/unit/pipeline/dcache_tb.sv
+vlog -work $work_lib -sv ../../tb/unit/pipeline/icache_tb.sv
 
 # Pipeline top-level integration is compiled by run_pipeline_core.do.
 # vlog -work $work_lib -sv ../../rtl/pipeline/core_pipeline.sv
