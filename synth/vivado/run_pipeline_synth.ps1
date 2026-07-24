@@ -5,21 +5,25 @@ param(
 $ErrorActionPreference = "Stop"
 
 if ([string]::IsNullOrWhiteSpace($VivadoPath)) {
-    $candidates = @(
-        "D:\2025.2\Vivado\bin\vivado.bat",
-        "C:\Xilinx\Vivado\2025.2\bin\vivado.bat",
-        "C:\Xilinx\Vivado\2024.2\bin\vivado.bat",
-        "C:\Xilinx\Vivado\2023.2\bin\vivado.bat"
-    )
-
-    $VivadoPath = $candidates |
-        Where-Object { Test-Path -LiteralPath $_ } |
+    $vivadoCommand = Get-Command vivado.bat -ErrorAction SilentlyContinue |
         Select-Object -First 1
+
+    if ($null -eq $vivadoCommand) {
+        $vivadoCommand = Get-Command vivado -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+    }
+
+    if ($null -ne $vivadoCommand) {
+        $VivadoPath = $vivadoCommand.Source
+    }
+    elseif (![string]::IsNullOrWhiteSpace($env:XILINX_VIVADO)) {
+        $VivadoPath = Join-Path $env:XILINX_VIVADO "bin\vivado.bat"
+    }
 }
 
 if ([string]::IsNullOrWhiteSpace($VivadoPath) -or
     !(Test-Path -LiteralPath $VivadoPath)) {
-    throw "Vivado was not found. Pass -VivadoPath with the full path to vivado.bat."
+    throw "Vivado was not found. Add it to PATH, set XILINX_VIVADO, or pass -VivadoPath."
 }
 
 $scriptPath = Join-Path $PSScriptRoot "create_pipeline_project.tcl"

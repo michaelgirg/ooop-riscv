@@ -75,8 +75,11 @@ Or give the launcher your installation explicitly:
 ```powershell
 powershell -ExecutionPolicy Bypass `
   -File .\synth\vivado\run_pipeline_synth.ps1 `
-  -VivadoPath "D:\2025.2\Vivado\bin\vivado.bat"
+  -VivadoPath "<Vivado installation>\bin\vivado.bat"
 ```
+
+Without `-VivadoPath`, the launcher checks `PATH` and then the
+`XILINX_VIVADO` environment variable.
 
 The generated reports are:
 

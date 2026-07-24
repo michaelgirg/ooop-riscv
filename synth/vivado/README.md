@@ -22,12 +22,10 @@ files are not required for RTL synthesis. Before using them:
 The script reads `rtl/common/rv32i_pkg.sv` before all importing modules. Keep
 this ordering when adding future pipeline or out-of-order source files.
 
-Run from any PowerShell directory:
+Run the single-cycle target from the repository root when Vivado is on `PATH`:
 
 ```powershell
-$vivado = "D:\2025.2\Vivado\bin\vivado.bat"
-& $vivado -mode batch `
-    -source "D:\Git\ooop-riscv\synth\vivado\create_project.tcl"
+vivado -mode batch -source .\synth\vivado\create_project.tcl
 ```
 
 `timing_summary.rpt` measures internal clocked paths. Pin locations and
@@ -41,10 +39,11 @@ After the pipeline Questa regression passes, run the cached pipeline target:
 powershell -ExecutionPolicy Bypass -File .\synth\vivado\run_pipeline_synth.ps1
 ```
 
-Pass `-VivadoPath "C:\path\to\vivado.bat"` when Vivado is installed somewhere
-the launcher does not recognize. Pipeline reports are written under
-`synth/vivado/build_pipeline`. See `docs/cache-integration.md` for the complete
-verification and timing workflow.
+The launcher checks `-VivadoPath`, `PATH`, and `XILINX_VIVADO`, in that order.
+For a custom installation, pass
+`-VivadoPath "<Vivado installation>\bin\vivado.bat"`. Pipeline reports are
+written under `synth/vivado/build_pipeline`. See `docs/cache-integration.md`
+for the complete verification and timing workflow.
 
 Summarize and package the completed reports with:
 
