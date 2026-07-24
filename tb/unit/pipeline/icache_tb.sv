@@ -34,6 +34,7 @@ module icache_tb #(
 
     logic                  mem_resp_valid;
     logic [LINE_BITS-1:0]  mem_resp_rdata;
+    logic                  mem_resp_fault;
     logic                  mem_resp_ready;
 
     logic [DATA_WIDTH-1:0] backing_memory [0:MEM_WORDS-1];
@@ -71,6 +72,7 @@ module icache_tb #(
         .mem_req_addr   (mem_req_addr),
         .mem_resp_valid (mem_resp_valid),
         .mem_resp_rdata (mem_resp_rdata),
+        .mem_resp_fault (mem_resp_fault),
         .mem_resp_ready (mem_resp_ready)
     );
 
@@ -155,8 +157,9 @@ module icache_tb #(
             pending_read         <= 1'b0;
             pending_read_addr    <= '0;
             response_delay       <= 0;
-            mem_resp_valid       <= 1'b0;
-            mem_resp_rdata       <= '0;
+        mem_resp_valid       <= 1'b0;
+        mem_resp_rdata       <= '0;
+        mem_resp_fault       <= 1'b0;
             memory_read_requests <= 0;
         end
         else begin

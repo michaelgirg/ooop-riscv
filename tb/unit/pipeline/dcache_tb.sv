@@ -37,6 +37,7 @@ module dcache_tb #(
 
     logic                  mem_resp_valid;
     logic [LINE_BITS-1:0]  mem_resp_rdata;
+    logic                  mem_resp_fault;
     logic                  mem_resp_ready;
 
     logic [DATA_WIDTH-1:0] backing_memory   [0:MEM_WORDS-1];
@@ -80,6 +81,7 @@ module dcache_tb #(
         .mem_req_wdata  (mem_req_wdata),
         .mem_resp_valid (mem_resp_valid),
         .mem_resp_rdata (mem_resp_rdata),
+        .mem_resp_fault (mem_resp_fault),
         .mem_resp_ready (mem_resp_ready)
     );
 
@@ -194,6 +196,7 @@ module dcache_tb #(
             response_delay       <= 0;
             mem_resp_valid       <= 1'b0;
             mem_resp_rdata       <= '0;
+            mem_resp_fault       <= 1'b0;
             memory_read_requests <= 0;
             memory_write_requests <= 0;
         end

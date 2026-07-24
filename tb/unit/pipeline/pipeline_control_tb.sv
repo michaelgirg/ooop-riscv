@@ -4,6 +4,7 @@ module pipeline_control_tb;
     logic load_use_stall;
     logic muldiv_stall;
     logic mem_stall;
+    logic if_stall;
     logic trap_req;
     logic [31:0] trap_target;
     logic pc_redirect;
@@ -23,6 +24,7 @@ module pipeline_control_tb;
         .load_use_stall(load_use_stall),
         .muldiv_stall  (muldiv_stall),
         .mem_stall     (mem_stall),
+        .if_stall      (if_stall),
         .trap_req      (trap_req),
         .trap_target   (trap_target),
         .pc_redirect   (pc_redirect),
@@ -42,6 +44,7 @@ module pipeline_control_tb;
         load_use_stall = 1'b0;
         muldiv_stall = 1'b0;
         mem_stall = 1'b0;
+        if_stall = 1'b0;
         trap_req = 1'b0;
         trap_target = 32'h0000_0000;
     endtask
@@ -103,6 +106,10 @@ module pipeline_control_tb;
         check("MEM stall",                       1'b0, 32'h0000_0000,   1'b1,  1'b1,  1'b0,  1'b0,  1'b1,  1'b1,  1'b0);
 
         clear_inputs();
+        if_stall = 1'b1;
+        check("I-cache stall",                    1'b0, 32'h0000_0000,   1'b1,  1'b1,  1'b0,  1'b0,  1'b0,  1'b0,  1'b0);
+
+        clear_inputs();
         ex_redirect = 1'b1;
         ex_target = 32'h0000_4000;
         check("EX redirect",                     1'b1, 32'h0000_4000,   1'b0,  1'b0,  1'b1,  1'b1,  1'b0,  1'b0,  1'b0);
@@ -128,6 +135,17 @@ module pipeline_control_tb;
         ex_target = 32'h0000_4000;
         muldiv_stall = 1'b1;
         check("redirect beats muldiv stall",     1'b1, 32'h0000_4000,   1'b0,  1'b0,  1'b1,  1'b1,  1'b0,  1'b0,  1'b0);
+
+        clear_inputs();
+        ex_redirect = 1'b1;
+        ex_target = 32'h0000_4000;
+        if_stall = 1'b1;
+        check("redirect beats I-cache stall",     1'b1, 32'h0000_4000,   1'b0,  1'b0,  1'b1,  1'b1,  1'b0,  1'b0,  1'b0);
+
+        clear_inputs();
+        muldiv_stall = 1'b1;
+        if_stall = 1'b1;
+        check("muldiv beats I-cache stall",       1'b0, 32'h0000_0000,   1'b1,  1'b1,  1'b0,  1'b0,  1'b1,  1'b0,  1'b1);
 
         clear_inputs();
         mem_stall = 1'b1;

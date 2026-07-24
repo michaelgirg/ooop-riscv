@@ -19,6 +19,9 @@ vsim.wlf
 vivado*.jou
 vivado*.log
 synth/vivado/build/
+synth/vivado/build_pipeline/
+synth/vivado/.vivado_user/
+synth/vivado/pipeline_reports.zip
 synth/vivado/dfx_runtime.txt
 /dfx_runtime.txt
 

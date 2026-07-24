@@ -8,8 +8,8 @@
 - Register count: 32 architectural registers
 - Memory addressing: byte addressed, little-endian
 - Reset PC: `0x00000000`
-- Instruction memory: combinational read
-- Data memory: combinational read, synchronous write
+- Single-cycle memories: combinational instruction/data reads and synchronous writes
+- Pipeline memories: cached, full-line, variable-latency accesses
 - Misaligned and out-of-range accesses: reported as faults
 - `FENCE` and `FENCE.I`: treated as NOPs in the current local-memory model
 - `ECALL` and `EBREAK`: halt the simulation core
@@ -52,6 +52,9 @@ Pipeline safety rules:
 - Load-use hazards stall PC and `IF/ID` for one cycle and inject one bubble into `ID/EX`.
 - Branches and jumps are resolved in EX with predict-not-taken behavior, so taken redirects flush `IF/ID` and `ID/EX`.
 - A same-cycle WB-to-ID bypass lets Decode see a value being written back on the same clock cycle.
+- An I-cache miss holds only PC and `IF/ID`, allowing older stages to drain.
+- A D-cache request holds `EX/MEM` and younger stages until its response is captured in `MEM/WB`.
+- Redirects outrank I-cache stalls so branch targets are not lost during a refill.
 
 ## Memory Contract
 
@@ -60,6 +63,8 @@ Pipeline safety rules:
 - Byte accesses may use any address, halfword accesses require `addr[0]=0`, and word accesses require `addr[1:0]=0`.
 - Data memory accepts exactly one of `mem_read` or `mem_write` per request.
 - Faulting loads return zero and faulting stores do not modify memory.
+- Pipeline backing memories transfer complete cache lines with valid/ready handshakes.
+- The pipeline I-cache is direct mapped; the D-cache is set associative, write back, and write allocate.
 - Because the current cores have no trap handler, faults halt the core and are exposed through debug outputs.
 
 ## Integration Contract

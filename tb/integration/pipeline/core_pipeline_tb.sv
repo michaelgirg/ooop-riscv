@@ -2,7 +2,7 @@
 
 module core_pipeline_tb;
     localparam int CLK_PERIOD = 10;
-    localparam int MAX_CYCLES = 200;
+    localparam int MAX_CYCLES = 1000;
 
     logic clk;
     logic rst;
@@ -107,8 +107,10 @@ module core_pipeline_tb;
         check_value(dut.u_regfile.regs[23], 32'd156, "x23 JALR link");
         check_value(dut.u_regfile.regs[31], 32'h0000_0000, "x31 skipped control-flow instructions");
 
-        check_value(dut.u_dmem.mem[0], 32'h0000_000c, "memory word store");
-        check_value(dut.u_dmem.mem[1], 32'h5000_00f0, "memory byte and halfword stores");
+        // x16-x20 above are loaded after the program's SW/SB/SH operations,
+        // so they verify the stored values through the D-cache. The backing
+        // array is intentionally not checked here: a write-back cache may
+        // still hold a correct dirty line when the program halts.
 
         if (errors == 0) begin
             $display("PASS: core_pipeline_tb (%0d executed cycles)", cycles);

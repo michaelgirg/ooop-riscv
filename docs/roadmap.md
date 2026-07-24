@@ -6,7 +6,7 @@
 - [x] Shared package and module interfaces
 - [x] Questa scripts
 - [x] Vivado synthesis script
-- [ ] Confirm FPGA board and device part
+- [x] Confirm ZedBoard device part (`xc7z020clg484-1`)
 - [x] Install/configure Questa command-line access
 - [ ] Install/configure Vivado command-line access
 
@@ -31,8 +31,11 @@
 - [x] Load-use stall
 - [x] Control-hazard flush
 - [x] Pipeline top-level integration smoke test
-- [ ] Add more directed hazard programs beyond the smoke test
-- [ ] Add fault/flush integration tests for the pipeline
+- [x] Integrate direct-mapped I-cache and set-associative D-cache
+- [x] Add delayed backing-memory line interfaces
+- [x] Verify redirect, MUL/DIV, dirty-eviction, and cache-fault overlaps
+- [x] Add more directed hazard programs beyond the smoke test
+- [x] Add fault/flush integration tests for the pipeline
 - [ ] Synthesize in Vivado and record timing/utilization
 
 ## M3: Out-of-Order Core

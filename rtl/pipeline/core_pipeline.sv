@@ -27,7 +27,13 @@ module core_pipeline #(
     parameter int IMEM_WORDS = 256,
     parameter int DMEM_WORDS = 1024,
     parameter string IMEM_HEX = "",
-    parameter string DMEM_HEX = ""
+    parameter string DMEM_HEX = "",
+    parameter int CACHE_LINE_WORDS = 4,
+    parameter int ICACHE_NUM_SETS = 16,
+    parameter int DCACHE_NUM_SETS = 16,
+    parameter int DCACHE_NUM_WAYS = 2,
+    parameter int IMEM_LATENCY = 15,
+    parameter int DMEM_LATENCY = 15
 ) (
     input logic clk_i,
     input logic rst_i,
@@ -40,6 +46,8 @@ module core_pipeline #(
     output logic        data_fault_o
 );
 
+    localparam int CACHE_LINE_BITS = 32 * CACHE_LINE_WORDS;
+
     // ------------------------------------------------------------------------
     // IF stage wires
     // ------------------------------------------------------------------------
@@ -49,6 +57,16 @@ module core_pipeline #(
     logic    [31:0] next_pc;
     logic    [31:0] fetched_instruction;
     logic           imem_access_fault;
+    logic           icache_resp_valid;
+    logic           icache_stall;
+
+    logic                         imem_req_ready;
+    logic                         imem_req_valid;
+    logic [31:0]                  imem_req_addr;
+    logic                         imem_resp_valid;
+    logic [CACHE_LINE_BITS-1:0]   imem_resp_rdata;
+    logic                         imem_resp_fault;
+    logic                         imem_resp_ready;
 
     if_id_t         if_id_d;
     if_id_t         if_id_q;
@@ -127,6 +145,26 @@ module core_pipeline #(
     logic    [31:0] memory_read_data;
     logic           data_access_fault;
     logic           ex_mem_fault;
+    logic           data_request;
+    logic           data_response_fire;
+    logic           mem_response_consumed;
+
+    logic                         dcache_req_ready;
+    logic                         dcache_resp_valid;
+    logic [31:0]                  dcache_resp_rdata;
+    logic                         dcache_resp_hit;
+    logic                         dcache_resp_miss;
+    logic                         dcache_resp_fault;
+
+    logic                         dmem_req_ready;
+    logic                         dmem_req_valid;
+    logic                         dmem_req_write;
+    logic [31:0]                  dmem_req_addr;
+    logic [CACHE_LINE_BITS-1:0]   dmem_req_wdata;
+    logic                         dmem_resp_valid;
+    logic [CACHE_LINE_BITS-1:0]   dmem_resp_rdata;
+    logic                         dmem_resp_fault;
+    logic                         dmem_resp_ready;
 
     mem_wb_t        mem_wb_d;
     mem_wb_t        mem_wb_q;
@@ -191,20 +229,52 @@ module core_pipeline #(
         .pc     (pc)
     );
 
-    imem #(
-        .WORDS   (IMEM_WORDS),
-        .HEX_FILE(IMEM_HEX)
+    icache #(
+        .NUM_SETS  (ICACHE_NUM_SETS),
+        .LINE_WORDS(CACHE_LINE_WORDS)
+    ) u_icache (
+        .clk            (clk_i),
+        .rst            (rst_i),
+        .cpu_req_valid  (!core_stop),
+        .cpu_req_addr   (pc),
+        .cpu_resp_valid (icache_resp_valid),
+        .cpu_resp_rdata (fetched_instruction),
+        .cpu_resp_fault (imem_access_fault),
+        .cpu_stall      (icache_stall),
+        .mem_req_ready  (imem_req_ready),
+        .mem_req_valid  (imem_req_valid),
+        .mem_req_addr   (imem_req_addr),
+        .mem_resp_valid (imem_resp_valid),
+        .mem_resp_rdata (imem_resp_rdata),
+        .mem_resp_fault (imem_resp_fault),
+        .mem_resp_ready (imem_resp_ready)
+    );
+
+    slow_line_memory #(
+        .LINE_WORDS (CACHE_LINE_WORDS),
+        .DEPTH_WORDS(IMEM_WORDS),
+        .LATENCY    (IMEM_LATENCY),
+        .HEX_FILE   (IMEM_HEX)
     ) u_imem (
-        .address     (pc),
-        .instruction (fetched_instruction),
-        .access_fault(imem_access_fault)
+        .clk       (clk_i),
+        .rst       (rst_i),
+        .req_valid (imem_req_valid),
+        .req_ready (imem_req_ready),
+        .req_write (1'b0),
+        .req_addr  (imem_req_addr),
+        .req_wdata ('0),
+        .resp_valid(imem_resp_valid),
+        .resp_ready(imem_resp_ready),
+        .resp_rdata(imem_resp_rdata),
+        .resp_fault(imem_resp_fault)
     );
 
     always_comb begin
         if_id_d = IF_ID_BUBBLE;
 
-        // A fetched instruction is valid as long as the core is not stopped.
-        if_id_d.valid = !core_stop;
+        // Only a completed hit or fault is allowed to enter Decode. A miss
+        // leaves a bubble here while pipeline_control holds the old IF/ID.
+        if_id_d.valid = icache_resp_valid && !core_stop;
         if_id_d.pc = pc;
         if_id_d.instruction = fetched_instruction;
         if_id_d.instruction_fault = imem_access_fault;
@@ -465,17 +535,13 @@ module core_pipeline #(
     // Pipeline control
     // ------------------------------------------------------------------------
 
-    // The current core still uses single-cycle dmem, so MEM never stalls. The
-    // D-cache integration will replace this tie-off with "request pending and
-    // no response" from the cache controller.
-    assign mem_stall = 1'b0;
-
     pipeline_control u_pipeline_control (
         .ex_redirect   (ex_redirect),
         .ex_target     (ex_target),
         .load_use_stall(load_use_stall),
         .muldiv_stall  (muldiv_stall),
         .mem_stall     (mem_stall),
+        .if_stall      (icache_stall),
         .trap_req      (1'b0),
         .trap_target   (32'b0),
         .pc_redirect   (pc_redirect),
@@ -499,24 +565,85 @@ module core_pipeline #(
                           ex_mem_q.instruction_fault ||
                           ex_mem_q.control_target_misaligned;
 
-    dmem #(
-        .DEPTH   (DMEM_WORDS),
-        .MEM_INIT(DMEM_HEX)
-    ) u_dmem (
-        .clk         (clk_i),
-        .addr        (ex_mem_q.alu_result),
-        .wr_data     (ex_mem_q.store_data),
-        .funct3      (memory_funct3),
-        .mem_read    (ex_mem_q.valid && ex_mem_q.mem_read && !ex_mem_fault && !core_stop),
-        .mem_write   (ex_mem_q.valid && ex_mem_q.mem_write && !ex_mem_fault && !core_stop),
-        .rd_data     (memory_read_data),
-        .access_fault(data_access_fault)
+    assign data_request = ex_mem_q.valid &&
+                          (ex_mem_q.mem_read || ex_mem_q.mem_write) &&
+                          !ex_mem_fault &&
+                          !core_stop;
+
+    // Keep the memory instruction in EX/MEM through the response edge. The
+    // following cycle, its result is in MEM/WB for normal forwarding and the
+    // held dependent instruction can safely advance from EX.
+    assign data_response_fire = dcache_resp_valid && !mem_response_consumed;
+    assign mem_stall = data_request && !mem_response_consumed;
+
+    always_ff @(posedge clk_i) begin
+        if (rst_i)
+            mem_response_consumed <= 1'b0;
+        else if (data_response_fire)
+            mem_response_consumed <= 1'b1;
+        else if (!stall_ex_mem)
+            mem_response_consumed <= 1'b0;
+    end
+
+    dcache #(
+        .NUM_SETS  (DCACHE_NUM_SETS),
+        .NUM_WAYS  (DCACHE_NUM_WAYS),
+        .LINE_WORDS(CACHE_LINE_WORDS)
+    ) u_dcache (
+        .clk            (clk_i),
+        .rst            (rst_i),
+        .cpu_req_valid  (data_request && !mem_response_consumed),
+        .cpu_req_write  (ex_mem_q.mem_write),
+        .cpu_req_addr   (ex_mem_q.alu_result),
+        .cpu_req_wdata  (ex_mem_q.store_data),
+        .cpu_req_funct3 (memory_funct3),
+        .cpu_req_ready  (dcache_req_ready),
+        .cpu_resp_ready (!mem_response_consumed),
+        .cpu_resp_valid (dcache_resp_valid),
+        .cpu_resp_rdata (dcache_resp_rdata),
+        .cpu_resp_hit   (dcache_resp_hit),
+        .cpu_resp_miss  (dcache_resp_miss),
+        .cpu_resp_fault (dcache_resp_fault),
+        .mem_req_ready  (dmem_req_ready),
+        .mem_req_valid  (dmem_req_valid),
+        .mem_req_write  (dmem_req_write),
+        .mem_req_addr   (dmem_req_addr),
+        .mem_req_wdata  (dmem_req_wdata),
+        .mem_resp_valid (dmem_resp_valid),
+        .mem_resp_rdata (dmem_resp_rdata),
+        .mem_resp_fault (dmem_resp_fault),
+        .mem_resp_ready (dmem_resp_ready)
     );
+
+    slow_line_memory #(
+        .LINE_WORDS (CACHE_LINE_WORDS),
+        .DEPTH_WORDS(DMEM_WORDS),
+        .LATENCY    (DMEM_LATENCY),
+        .HEX_FILE   (DMEM_HEX)
+    ) u_dmem (
+        .clk       (clk_i),
+        .rst       (rst_i),
+        .req_valid (dmem_req_valid),
+        .req_ready (dmem_req_ready),
+        .req_write (dmem_req_write),
+        .req_addr  (dmem_req_addr),
+        .req_wdata (dmem_req_wdata),
+        .resp_valid(dmem_resp_valid),
+        .resp_ready(dmem_resp_ready),
+        .resp_rdata(dmem_resp_rdata),
+        .resp_fault(dmem_resp_fault)
+    );
+
+    assign memory_read_data = dcache_resp_rdata;
+    assign data_access_fault = dcache_resp_valid && dcache_resp_fault;
 
     always_comb begin
         mem_wb_d = MEM_WB_BUBBLE;
 
-        if (ex_mem_q.valid) begin
+        if (ex_mem_q.valid &&
+            (!(ex_mem_q.mem_read || ex_mem_q.mem_write) ||
+             ex_mem_fault ||
+             data_response_fire)) begin
             mem_wb_d.valid = 1'b1;
 
             mem_wb_d.pc = ex_mem_q.pc;

@@ -80,6 +80,7 @@ module icache
 
     input  logic                             mem_resp_valid,
     input  logic [(DATA_WIDTH*LINE_WORDS)-1:0] mem_resp_rdata,
+    input  logic                             mem_resp_fault,
 
     output logic                             mem_resp_ready
 
@@ -101,7 +102,8 @@ module icache
     typedef enum logic [1:0] {
         ICACHE_LOOKUP,
         ICACHE_REFILL_REQUEST,
-        ICACHE_REFILL_WAIT
+        ICACHE_REFILL_WAIT,
+        ICACHE_FAULT_RESPONSE
     } icache_state_t;
 
     icache_state_t state;
@@ -183,7 +185,13 @@ module icache
         cpu_stall      = 1'b0;
 
         if (cpu_req_valid) begin
-            if (state != ICACHE_LOOKUP) begin
+            if (state == ICACHE_FAULT_RESPONSE) begin
+                // A backing-memory fault completes the frozen fetch with a
+                // NOP. The fault bit travels with it and suppresses effects.
+                cpu_resp_valid = 1'b1;
+                cpu_resp_fault = 1'b1;
+            end
+            else if (state != ICACHE_LOOKUP) begin
                 // A refill is in flight: keep the front of the pipe frozen.
                 cpu_stall = 1'b1;
             end
@@ -309,13 +317,21 @@ module icache
 
                 ICACHE_REFILL_WAIT: begin
                     if (mem_resp_valid && mem_resp_ready) begin
-                        data_array[req_set]  <= mem_resp_rdata;
-                        valid_array[req_set] <= 1'b1;
-                        tag_array[req_set]   <= req_tag;
-
-                        state <= ICACHE_LOOKUP;
+                        if (mem_resp_fault)
+                            state <= ICACHE_FAULT_RESPONSE;
+                        else begin
+                            data_array[req_set]  <= mem_resp_rdata;
+                            valid_array[req_set] <= 1'b1;
+                            tag_array[req_set]   <= req_tag;
+                            state                <= ICACHE_LOOKUP;
+                        end
                     end
                 end
+
+                // The fetch stage consumes this response in one cycle. If an
+                // older redirect wins simultaneously, pipeline_control flushes
+                // it and the cache simply returns to normal lookup.
+                ICACHE_FAULT_RESPONSE: state <= ICACHE_LOOKUP;
 
                 default: state <= ICACHE_LOOKUP;
             endcase

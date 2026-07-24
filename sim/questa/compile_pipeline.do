@@ -38,6 +38,7 @@ vlog -work $work_lib -sv ../../rtl/pipeline/pipeline_control.sv
 vlog -work $work_lib -sv ../../rtl/pipeline/mul_unit.sv
 vlog -work $work_lib -sv ../../rtl/pipeline/div_unit.sv
 vlog -work $work_lib -sv ../../rtl/pipeline/muldiv_unit.sv
+vlog -work $work_lib -sv ../../rtl/pipeline/slow_line_memory.sv
 vlog -work $work_lib -sv ../../rtl/pipeline/plru.sv
 vlog -work $work_lib -sv ../../rtl/pipeline/dcache.sv
 vlog -work $work_lib -sv ../../rtl/pipeline/icache.sv
@@ -53,6 +54,7 @@ vlog -work $work_lib -sv ../../tb/unit/pipeline/pipeline_control_tb.sv
 vlog -work $work_lib -sv ../../tb/unit/pipeline/mul_unit_tb.sv
 vlog -work $work_lib -sv ../../tb/unit/pipeline/div_unit_tb.sv
 vlog -work $work_lib -sv ../../tb/unit/pipeline/muldiv_unit_tb.sv
+vlog -work $work_lib -sv ../../tb/unit/pipeline/slow_line_memory_tb.sv
 vlog -work $work_lib -sv ../../tb/unit/pipeline/plru_tb.sv
 vlog -work $work_lib -sv ../../tb/unit/pipeline/dcache_tb.sv
 vlog -work $work_lib -sv ../../tb/unit/pipeline/icache_tb.sv

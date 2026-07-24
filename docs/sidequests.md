@@ -57,6 +57,8 @@ Learning tags:
     Useful bridge from in-order memory handling to the later out-of-order load/store queue.
 16. **Trace-driven cache model first** `[wknd]` `(L2)`
     Simulate cache choices in Python or C before committing to RTL.
+17. **Pipelined I-cache hit path** `[wknd]` `(L3)`
+    Register tag/data lookup and carry request PC/valid metadata through fetch. Do this only after timing reports identify the flow-through I-cache hit as a critical path.
 
 ### Cache Integration Rule
 
@@ -66,52 +68,52 @@ it; do not allow the held instruction to reissue after the unit finishes.
 
 ## ISA Extensions
 
-17. **M extension** `[1wk]` `(L3)`
+18. **M extension** `[1wk]` `(L3)`
     Add multiply/divide and learn variable-latency functional-unit control.
-18. **C extension** `[1wk]` `(L3)`
+19. **C extension** `[1wk]` `(L3)`
     Add 16-bit compressed instructions and rebuild fetch alignment logic.
-19. **A extension** `[1wk]` `(L2)`
+20. **A extension** `[1wk]` `(L2)`
     Add LR/SC and AMO operations as a first memory-ordering project.
-20. **Bit manipulation** `[wknd]` `(L1)`
+21. **Bit manipulation** `[wknd]` `(L1)`
     Add small ALU operations from Zbb/Zba/Zbs.
-21. **Floating point** `[multi]` `(L3)`
+22. **Floating point** `[multi]` `(L3)`
     Add an FP register file, IEEE-754 operations, rounding modes, and FP hazards.
-22. **RV64 version** `[multi]` `(L3)`
+23. **RV64 version** `[multi]` `(L3)`
     Widen datapath, registers, memories, immediates, and add RV64I word-operation rules.
 
 ## Privilege, Traps, And Software
 
-23. **Minimal CSR file** `[1wk]` `(L2)`
+24. **Minimal CSR file** `[1wk]` `(L2)`
     Add machine-mode CSRs needed for tests, traps, counters, and basic software bring-up.
-24. **Precise traps** `[1wk]` `(L3)`
+25. **Precise traps** `[1wk]` `(L3)`
     Capture `mepc`/`mcause`, squash correctly, redirect to `mtvec`, and return with `mret`.
-25. **Timer and interrupts** `[1wk]` `(L2)`
+26. **Timer and interrupts** `[1wk]` `(L2)`
     Add CLINT-style timer/software interrupts and eventually external interrupts.
-26. **UART/GPIO SoC shell** `[1wk]` `(L2)`
+27. **UART/GPIO SoC shell** `[1wk]` `(L2)`
     Add memory-mapped peripherals so software can print and interact with the outside world.
-27. **Bootloader or tiny C runtime** `[1wk]` `(L2)`
+28. **Bootloader or tiny C runtime** `[1wk]` `(L2)`
     Add linker script, startup code, objcopy-to-hex flow, and a simple C program.
-28. **RTOS or Linux path** `[multi]` `(L3)`
+29. **RTOS or Linux path** `[multi]` `(L3)`
     Requires traps, CSRs, timer, MMU for Linux, and a much stronger verification story.
 
 ## Bigger Architectures
 
-29. **Dual-issue in-order** `[multi]` `(L3)`
+30. **Dual-issue in-order** `[multi]` `(L3)`
     Learn issue logic, structural hazards, and extra register-file ports before full OOO.
-30. **Out-of-order core** `[multi]` `(L3)`
+31. **Out-of-order core** `[multi]` `(L3)`
     Add rename, physical registers, reservation stations, ROB, wakeup/select, and in-order retirement.
-31. **Multicore and coherence** `[multi]` `(L3)`
+32. **Multicore and coherence** `[multi]` `(L3)`
     Add multiple harts and a small coherence protocol such as MSI.
 
 ## FPGA, Area, And Power
 
-32. **Vivado timing/utilization reports** `[wknd]` `(L1)`
+33. **Vivado timing/utilization reports** `[wknd]` `(L1)`
     Synthesize the single-cycle and pipeline cores, then record LUTs, FFs, BRAMs, DSPs, and Fmax.
-33. **Area and power study** `[wknd]` `(L1)`
+34. **Area and power study** `[wknd]` `(L1)`
     Compare design choices by resource count and switching/power estimates.
-34. **FPGA bring-up** `[1wk]` `(L2)`
+35. **FPGA bring-up** `[1wk]` `(L2)`
     Add board wrapper, clock/reset, UART, LEDs, and ILA debug.
-35. **Open-source ASIC flow** `[multi]` `(L3)`
+36. **Open-source ASIC flow** `[multi]` `(L3)`
     Try OpenLane/Sky130 for synthesis, place, route, and timing closure.
 
 ## Recommended Path

@@ -14,7 +14,7 @@
 // standard 2-cycle penalty. (Resolving JAL in ID would cut it to 1 cycle; left
 // as a later optimization.)
 //
-// Priority:  trap > MEM stall > taken branch/jump > load-use > MUL/DIV stall
+// Priority: trap > MEM stall > redirect > load-use > MUL/DIV > I-cache stall
 //   - trap outranks a branch: an exception on the older instruction wins.
 //   - a MEM stall holds the older EX/MEM instruction, so younger EX work cannot
 //     advance or redirect until the cache transaction completes.
@@ -34,6 +34,9 @@ module pipeline_control (
   // ---- variable-latency MEM op (from D-cache integration) -------------------
   input  logic        mem_stall,      // request in EX/MEM has no response yet
 
+  // ---- instruction-fetch miss ----------------------------------------------
+  input  logic        if_stall,       // I-cache refill in flight
+
   // ---- trap / fault (v1 aggregate; refine with the CSR module) --------------
   input  logic        trap_req,       // exception detected this cycle
   input  logic [31:0] trap_target,    // mtvec base (stub until CSRs land)
@@ -41,7 +44,7 @@ module pipeline_control (
   // ---- to PC / fetch --------------------------------------------------------
   output logic        pc_redirect,    // override sequential PC with pc_target
   output logic [31:0] pc_target,
-  output logic        pc_stall,       // hold PC (load-use / muldiv)
+  output logic        pc_stall,       // hold PC for a data, EX, or fetch stall
 
   // ---- to pipeline registers ------------------------------------------------
   output logic        stall_if_id,    // hold IF/ID  (load-use / muldiv)
@@ -105,6 +108,14 @@ module pipeline_control (
       stall_if_id  = 1'b1;
       stall_id_ex  = 1'b1;
       flush_ex_mem = 1'b1;
+    end
+    else if (if_stall) begin
+      // An instruction miss is younger than every instruction already in the
+      // pipeline. Freeze only PC and IF/ID so older work can keep draining.
+      // Redirects are intentionally above this case so a taken branch updates
+      // PC even while an earlier wrong-path refill is still finishing.
+      pc_stall    = 1'b1;
+      stall_if_id = 1'b1;
     end
   end
 endmodule

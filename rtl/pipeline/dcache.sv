@@ -75,6 +75,7 @@ module dcache #(
 
     input  logic                             mem_resp_valid,
     input  logic [(DATA_WIDTH*LINE_WORDS)-1:0] mem_resp_rdata,
+    input  logic                             mem_resp_fault,
 
     output logic                             mem_resp_ready
 
@@ -422,7 +423,8 @@ module dcache #(
         end
         else if ((state == CACHE_REFILL_WAIT) &&
                  mem_resp_valid &&
-                 mem_resp_ready) begin
+                 mem_resp_ready &&
+                 !mem_resp_fault) begin
             plru_update       = 1'b1;
             plru_accessed_way = victim_way;
         end
@@ -640,17 +642,26 @@ module dcache #(
 
                 CACHE_REFILL_WAIT: begin
                     if (mem_resp_valid && mem_resp_ready) begin
-                        data_array[req_set][victim_way] <= refill_line;
-
-                        valid_array[req_set][victim_way] <= 1'b1;
-                        dirty_array[req_set][victim_way] <= req_write;
-                        tag_array[req_set][victim_way]   <= req_tag;
-
                         response_valid <= 1'b1;
-                        response_data  <= req_write ? '0 : refill_read_data;
                         response_hit   <= 1'b0;
                         response_miss  <= 1'b1;
-                        response_fault <= 1'b0;
+
+                        if (mem_resp_fault) begin
+                            // Do not install or dirty a line that backing
+                            // memory reported as inaccessible.
+                            response_data  <= '0;
+                            response_fault <= 1'b1;
+                        end
+                        else begin
+                            data_array[req_set][victim_way] <= refill_line;
+
+                            valid_array[req_set][victim_way] <= 1'b1;
+                            dirty_array[req_set][victim_way] <= req_write;
+                            tag_array[req_set][victim_way]   <= req_tag;
+
+                            response_data  <= req_write ? '0 : refill_read_data;
+                            response_fault <= 1'b0;
+                        end
 
                         state <= CACHE_RESPONSE;
                     end

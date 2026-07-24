@@ -8,10 +8,9 @@ multiply/divide extension. The project is built as separately verified cores:
 2. Five-stage pipelined RV32I
 3. Small out-of-order RV32I
 
-The single-cycle RV32IM core is the passing reference design. The five-stage pipeline
-now has its unit tests and smoke integration test passing in Questa. The next
-major milestone is broader pipeline verification before starting the
-out-of-order core.
+The single-cycle RV32IM core is the passing reference design. The five-stage
+pipeline now integrates RV32M, separate instruction and data caches, delayed
+line memories, and directed cache/stall overlap verification in Questa.
 
 ## Tools
 
@@ -60,6 +59,7 @@ program. Each script exits with a nonzero result when a test reports an error.
 - Single-cycle RV32I and RV32M integration tests: passing
 - Pipeline unit tests: passing
 - Pipeline integration smoke test: passing
+- Cached pipeline overlap and fault tests: passing
 - Vivado synthesis/timing: still to be recorded
 
 ## Side Quests
@@ -71,16 +71,16 @@ requirements for the current pipeline milestone.
 
 ## Vivado Synthesis
 
-Edit `synth/vivado/create_project.tcl` to select the FPGA part for your board,
-then run:
+The Vivado scripts target the ZedBoard's `xc7z020clg484-1` device. Run the
+single-cycle target with:
 
 ```powershell
 vivado -mode batch -source synth/vivado/create_project.tcl
 ```
 
-The first synthesis target is `core_single_cycle`. Pipeline synthesis should be
-run after the pipeline simulation regression is broader than the current smoke
-test.
+The single-cycle target remains `create_project.tcl`. The cached pipeline target
+is `create_pipeline_project.tcl`; run it through
+`synth/vivado/run_pipeline_synth.ps1` after both pipeline regressions pass.
 
 ## Collaboration
 
