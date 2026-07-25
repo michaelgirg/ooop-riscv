@@ -50,21 +50,32 @@ foreach ($line in $timingMatches) {
 }
 
 Add-SummaryLine ""
-Add-SummaryLine "Utilization"
+Add-SummaryLine "Hierarchy utilization"
 $utilizationMatches = $utilizationLines | Where-Object {
-    $_ -match "\| (Slice LUTs|Slice Registers|Block RAM Tile|DSPs|CLB LUTs|CLB Registers|RAMB18|RAMB36|DSP48)"
-} | Select-Object -First 30
+    $_ -match "^\|\s+(core_pipeline|u_dcache|u_dmem|u_icache|u_imem|u_muldiv_unit)\s+\|"
+} | Select-Object -First 20
 
 foreach ($line in $utilizationMatches) {
     Add-SummaryLine $line
 }
 
-$criticalCount = @($methodologyLines | Where-Object {
-    $_ -match "CRITICAL WARNING"
-}).Count
-$warningCount = @($methodologyLines | Where-Object {
-    ($_ -match "WARNING") -and ($_ -notmatch "CRITICAL WARNING")
-}).Count
+$criticalCount = 0
+$warningCount = 0
+
+# Sum the message counts in Vivado's methodology summary table. Counting raw
+# occurrences of "WARNING" also counts headings and detailed message text.
+foreach ($line in $methodologyLines) {
+    if ($line -match '^\|\s*[^|]+\|\s*(Critical Warning|Warning)\s*\|.*\|\s*(\d+)\s*\|\s*$') {
+        $count = [int]$Matches[2]
+
+        if ($Matches[1] -eq "Critical Warning") {
+            $criticalCount += $count
+        }
+        else {
+            $warningCount += $count
+        }
+    }
+}
 
 Add-SummaryLine ""
 Add-SummaryLine "Methodology"

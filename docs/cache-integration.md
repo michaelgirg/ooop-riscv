@@ -16,6 +16,12 @@ D-cache misses without adding a memory arbiter during this milestone. A unified
 memory controller can be added later without changing either CPU-side cache
 interface.
 
+The delayed backing memories store one complete cache line per block-RAM
+entry. Pipeline HEX files therefore contain one 128-bit line per row for the
+default four-word line, with the lowest-addressed word in bits `[31:0]` (the
+rightmost eight hexadecimal digits). Single-cycle memories continue using one
+32-bit word per row.
+
 ## Pipeline Control Rules
 
 The control priority is:

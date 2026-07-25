@@ -8,7 +8,7 @@ set project_name "ooop_riscv_pipeline"
 set script_dir [file dirname [file normalize [info script]]]
 set project_dir [file normalize "$script_dir/build_pipeline"]
 set repo_root [file normalize "$script_dir/../.."]
-set synth_hex [file normalize "$repo_root/tb/programs/synth_test.hex"]
+set synth_hex [file normalize "$repo_root/tb/programs/synth_test_lines.hex"]
 
 create_project -force $project_name $project_dir -part $part_name
 set_property target_language Verilog [current_project]
