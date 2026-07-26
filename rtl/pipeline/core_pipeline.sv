@@ -357,6 +357,10 @@ module core_pipeline #(
 
             id_ex_d.pc = if_id_q.pc;
             id_ex_d.pc_plus_four = if_id_q.pc + 32'd4;
+            // Compute the branch/JAL target before EX. The branch comparison
+            // still happens in EX, but its result no longer feeds a 32-bit
+            // target adder on the path to the PC register.
+            id_ex_d.pc_relative_target = if_id_q.pc + immediate;
 
             id_ex_d.rs1_addr = rs1_addr;
             id_ex_d.rs2_addr = rs2_addr;
@@ -497,7 +501,7 @@ module core_pipeline #(
     assign jalr_target = (forwarded_rs1_data + id_ex_q.immediate) &
                          32'hffff_fffe;
     assign ex_target = id_ex_q.jalr ? jalr_target :
-                       (id_ex_q.pc + id_ex_q.immediate);
+                       id_ex_q.pc_relative_target;
 
     assign control_target_misaligned = ex_redirect && (ex_target[1:0] != 2'b00);
 

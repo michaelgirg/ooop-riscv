@@ -115,6 +115,7 @@ package rv32i_pkg;
         // Address information used by branches, jumps, and link writeback.
         logic [31:0] pc;
         logic [31:0] pc_plus_four;
+        logic [31:0] pc_relative_target;
 
         // Register addresses are retained for hazard detection and forwarding.
         logic [4:0]  rs1_addr;
