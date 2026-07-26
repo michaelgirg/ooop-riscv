@@ -50,3 +50,17 @@ Summarize and package the completed reports with:
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\synth\vivado\view_pipeline_reports.ps1 -Package
 ```
+
+The full build saves `post_synth.dcp`, then runs optimization, placement,
+physical optimization, and routing before timing analysis. If Vivado is
+interrupted after the synthesis checkpoint is written, resume implementation
+and regenerate the reports with:
+
+```powershell
+powershell -ExecutionPolicy Bypass `
+  -File .\synth\vivado\run_pipeline_synth.ps1 `
+  -ReportsOnly
+```
+
+Timing in `timing_summary.rpt` is post-route timing. The implemented design is
+saved as `post_route.dcp`, and `route_status.rpt` confirms routing completion.

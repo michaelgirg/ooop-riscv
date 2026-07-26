@@ -93,7 +93,13 @@ The generated reports are:
 synth/vivado/build_pipeline/utilization.rpt
 synth/vivado/build_pipeline/timing_summary.rpt
 synth/vivado/build_pipeline/methodology.rpt
+synth/vivado/build_pipeline/route_status.rpt
 ```
+
+The synthesized checkpoint is saved before implementation. Timing is reported
+after optimization, placement, physical optimization, and routing. If a later
+step is interrupted, `run_pipeline_synth.ps1 -ReportsOnly` resumes from the
+checkpoint and avoids repeating synthesis.
 
 The launcher uses `synth/vivado/.vivado_user` for temporary Vivado profile data.
 This prevents stale per-user app settings from breaking batch startup and keeps

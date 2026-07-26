@@ -131,6 +131,7 @@ module core_pipeline #(
 
     logic           branch_taken;
     logic           ex_redirect;
+    logic    [31:0] jalr_target;
     logic    [31:0] ex_target;
     logic           control_target_misaligned;
 
@@ -491,7 +492,12 @@ module core_pipeline #(
 
     assign ex_redirect = id_ex_q.valid && (id_ex_q.jump || branch_taken);
 
-    assign ex_target = id_ex_q.jalr ? (alu_result & 32'hffff_fffe) : (id_ex_q.pc + id_ex_q.immediate);
+    // JALR gets a dedicated target adder. Reusing the general ALU placed its
+    // operand and operation muxes in the MEM/WB-forwarding-to-PC timing path.
+    assign jalr_target = (forwarded_rs1_data + id_ex_q.immediate) &
+                         32'hffff_fffe;
+    assign ex_target = id_ex_q.jalr ? jalr_target :
+                       (id_ex_q.pc + id_ex_q.immediate);
 
     assign control_target_misaligned = ex_redirect && (ex_target[1:0] != 2'b00);
 

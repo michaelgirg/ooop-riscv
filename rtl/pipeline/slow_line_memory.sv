@@ -120,8 +120,6 @@ module slow_line_memory #(
                         // the array and return an all-zero fault response.
                         if (!req_write && !request_fault(req_addr))
                             pending_read_line <= mem[request_line_index];
-                        else
-                            pending_read_line <= '0;
 
                         state         <= MEMORY_WAIT;
                     end
@@ -139,7 +137,7 @@ module slow_line_memory #(
                     end
                     else begin
                         resp_valid <= 1'b1;
-                        resp_rdata <= pending_read_line;
+                        resp_rdata <= pending_fault ? '0 : pending_read_line;
                         resp_fault <= pending_fault;
                         state      <= MEMORY_RESPONSE;
                     end

@@ -8,13 +8,15 @@ $ErrorActionPreference = "Stop"
 $utilizationPath = Join-Path $BuildPath "utilization.rpt"
 $timingPath = Join-Path $BuildPath "timing_summary.rpt"
 $methodologyPath = Join-Path $BuildPath "methodology.rpt"
+$routeStatusPath = Join-Path $BuildPath "route_status.rpt"
 $summaryPath = Join-Path $BuildPath "report_summary.txt"
 $archivePath = Join-Path $PSScriptRoot "pipeline_reports.zip"
 
 $requiredReports = @(
     $utilizationPath,
     $timingPath,
-    $methodologyPath
+    $methodologyPath,
+    $routeStatusPath
 )
 
 foreach ($report in $requiredReports) {
@@ -26,6 +28,7 @@ foreach ($report in $requiredReports) {
 $timingLines = Get-Content -LiteralPath $timingPath
 $utilizationLines = Get-Content -LiteralPath $utilizationPath
 $methodologyLines = Get-Content -LiteralPath $methodologyPath
+$routeStatusLines = Get-Content -LiteralPath $routeStatusPath
 
 $summary = [System.Collections.Generic.List[string]]::new()
 
@@ -36,7 +39,7 @@ function Add-SummaryLine {
     Write-Host $Line
 }
 
-Add-SummaryLine "OOOP-RISCV cached pipeline synthesis summary"
+Add-SummaryLine "OOOP-RISCV cached pipeline post-route summary"
 Add-SummaryLine "Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
 Add-SummaryLine ""
 
@@ -82,6 +85,16 @@ Add-SummaryLine "Methodology"
 Add-SummaryLine "Critical warnings: $criticalCount"
 Add-SummaryLine "Warnings: $warningCount"
 
+Add-SummaryLine ""
+Add-SummaryLine "Routing"
+$routeMatches = $routeStatusLines | Where-Object {
+    $_ -match "Design Route Status|Fully Routed|Unrouted Nets|Routing Errors"
+} | Select-Object -First 20
+
+foreach ($line in $routeMatches) {
+    Add-SummaryLine $line
+}
+
 $summary | Set-Content -LiteralPath $summaryPath
 Write-Host ""
 Write-Host "Summary written to: $summaryPath"
@@ -95,6 +108,7 @@ if ($Package) {
         $utilizationPath,
         $timingPath,
         $methodologyPath,
+        $routeStatusPath,
         $summaryPath
     ) -DestinationPath $archivePath
 
