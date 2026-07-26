@@ -53,7 +53,9 @@ module core_pipeline #(
     // ------------------------------------------------------------------------
 
     logic    [31:0] pc;
-    logic    [31:0] pc_plus_four;
+    // Preserve the incrementer output as a net boundary. This keeps Vivado
+    // from absorbing the late branch-redirect mux into the PC + 4 carry chain.
+    (* keep = "true" *) logic [31:0] pc_plus_four;
     logic    [31:0] next_pc;
     logic    [31:0] fetched_instruction;
     logic           imem_access_fault;
@@ -460,11 +462,11 @@ module core_pipeline #(
     );
 
     // Multi-cycle MUL/DIV shares the forwarded EX operands with the ALU. A
-    // completed result is accepted only when ID/EX can advance. A future cache
-    // miss must assert stall_id_ex; the wrapper will then hold its result and
-    // will not reissue the instruction while MEM is back-pressured.
+    // completed result only needs to wait when the older MEM instruction is
+    // back-pressured. The other source of stall_id_ex is muldiv_stall itself,
+    // which cannot coincide with a completed result.
     assign muldiv_active = id_ex_q.valid && id_ex_q.is_muldiv;
-    assign muldiv_result_ready = !stall_id_ex;
+    assign muldiv_result_ready = !mem_stall;
 
     muldiv_unit u_muldiv_unit (
         .clk     (clk_i),
