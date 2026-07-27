@@ -1,5 +1,6 @@
 param(
-    [string]$VivadoPath = ""
+    [string]$VivadoPath = "",
+    [switch]$ReportsOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -26,8 +27,15 @@ if ([string]::IsNullOrWhiteSpace($VivadoPath) -or
     throw "Vivado was not found. Add it to PATH, set XILINX_VIVADO, or pass -VivadoPath."
 }
 
-$scriptPath = Join-Path $PSScriptRoot "create_pipeline_project.tcl"
 $buildPath = Join-Path $PSScriptRoot "build_pipeline"
+$checkpointPath = Join-Path $buildPath "post_synth.dcp"
+$scriptName = if ($ReportsOnly) {
+    "report_pipeline_checkpoint.tcl"
+}
+else {
+    "create_pipeline_project.tcl"
+}
+$scriptPath = Join-Path $PSScriptRoot $scriptName
 $userRoot = Join-Path $PSScriptRoot ".vivado_user"
 $roamingRoot = Join-Path $userRoot "AppData\Roaming"
 $localRoot = Join-Path $userRoot "AppData\Local"
@@ -38,7 +46,11 @@ $localRoot = Join-Path $userRoot "AppData\Local"
 New-Item -ItemType Directory -Force -Path $roamingRoot | Out-Null
 New-Item -ItemType Directory -Force -Path $localRoot | Out-Null
 
-if (Test-Path -LiteralPath $buildPath) {
+if ($ReportsOnly -and !(Test-Path -LiteralPath $checkpointPath)) {
+    throw "No synthesis checkpoint was found. Run a full pipeline synthesis first."
+}
+
+if (!$ReportsOnly -and (Test-Path -LiteralPath $buildPath)) {
     Remove-Item -LiteralPath $buildPath -Recurse -Force
 }
 
@@ -47,6 +59,7 @@ $env:LOCALAPPDATA = $localRoot
 $env:HOME = $userRoot
 
 Write-Host "Using Vivado: $VivadoPath"
+Write-Host "Mode: $(if ($ReportsOnly) { 'reports only' } else { 'full synthesis' })"
 Write-Host "Synthesis script: $scriptPath"
 Write-Host "Vivado user data: $userRoot"
 

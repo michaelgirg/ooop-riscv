@@ -134,7 +134,10 @@ module pipeline_control_tb;
         ex_redirect = 1'b1;
         ex_target = 32'h0000_4000;
         muldiv_stall = 1'b1;
-        check("redirect beats muldiv stall",     1'b1, 32'h0000_4000,   1'b0,  1'b0,  1'b1,  1'b1,  1'b0,  1'b0,  1'b0);
+        // MUL/DIV and redirects cannot describe the same legal ID/EX entry.
+        // The independent bubble output remains asserted for fail-safe handling
+        // of this artificial input combination.
+        check("redirect with impossible muldiv", 1'b1, 32'h0000_4000,   1'b0,  1'b0,  1'b1,  1'b1,  1'b0,  1'b0,  1'b1);
 
         clear_inputs();
         ex_redirect = 1'b1;

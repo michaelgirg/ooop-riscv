@@ -19,7 +19,7 @@ module core_pipeline_tb;
     core_pipeline #(
         .IMEM_WORDS (64),
         .DMEM_WORDS (64),
-        .IMEM_HEX   ("../../tb/programs/smoke_test.hex")
+        .IMEM_HEX   ("../../tb/programs/smoke_test_lines.hex")
     ) dut (
         .clk_i                 (clk),
         .rst_i                 (rst),

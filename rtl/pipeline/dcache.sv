@@ -99,6 +99,7 @@ module dcache #(
     typedef enum logic [2:0] {
         CACHE_IDLE,
         CACHE_LOOKUP,
+        CACHE_STORE_HIT,
         CACHE_WRITEBACK,
         CACHE_REFILL_REQUEST,
         CACHE_REFILL_WAIT,
@@ -134,6 +135,10 @@ module dcache #(
 
     // Victim chosen when the request misses.
     way_index_t victim_way;
+
+    // A store hit registers its selected way before modifying the line. This
+    // breaks the tag-compare-to-cache-line-write timing path.
+    way_index_t store_hit_way;
 
     // -------------------------------------------------------------------------
     // Saved CPU response
@@ -362,8 +367,10 @@ module dcache #(
     // -------------------------------------------------------------------------
 
     logic [LINE_BITS-1:0] hit_line;
-    logic [LINE_BITS-1:0] hit_line_after_store;
     logic [DATA_WIDTH-1:0] hit_read_data;
+
+    logic [LINE_BITS-1:0] store_hit_line;
+    logic [LINE_BITS-1:0] store_hit_line_after_store;
 
     logic [LINE_BITS-1:0] refill_line;
     logic [DATA_WIDTH-1:0] refill_read_data;
@@ -371,18 +378,21 @@ module dcache #(
     always_comb begin
         hit_line = data_array[req_set][hit_way];
 
-        hit_line_after_store = apply_store(
-            hit_line,
-            req_word_offset,
-            req_byte_offset,
-            req_funct3,
-            req_wdata
-        );
-
         hit_read_data = format_load(
             read_word(hit_line, hit_way, req_word_offset),
             req_byte_offset,
             req_funct3
+        );
+
+        // The way was registered in CACHE_LOOKUP, so this update no longer
+        // depends combinationally on the tag comparison.
+        store_hit_line = data_array[req_set][store_hit_way];
+        store_hit_line_after_store = apply_store(
+            store_hit_line,
+            req_word_offset,
+            req_byte_offset,
+            req_funct3,
+            req_wdata
         );
 
         refill_line = mem_resp_rdata;
@@ -500,6 +510,8 @@ module dcache #(
             v
         CACHE_LOOKUP -- fault or hit --------------------> CACHE_RESPONSE
             |
+            +-- store hit --> CACHE_STORE_HIT ----------> CACHE_RESPONSE
+            |
             +-- clean miss --> CACHE_REFILL_REQUEST
             |
             +-- dirty miss --> CACHE_WRITEBACK
@@ -525,6 +537,10 @@ module dcache #(
         CACHE_LOOKUP:
             Examines the saved CPU request and determines whether the access is faulty,
             a cache hit, or a cache miss.
+
+        CACHE_STORE_HIT:
+            Updates the line selected by the previous cycle's tag lookup. The
+            registered way removes tag comparison from the line-write path.
         
         CACHE_WRITEBACK:
             Used only on a cache miss when the selected victim line is dirty.
@@ -552,6 +568,7 @@ module dcache #(
             req_funct3 <= '0;
             req_fault  <= 1'b0;
             victim_way <= '0;
+            store_hit_way <= '0;
 
             response_valid <= 1'b0;
             response_data  <= '0;
@@ -604,20 +621,18 @@ module dcache #(
                     end
                     else if (cache_hit) begin
                         if (req_write) begin
-                            data_array[req_set][hit_way] <=
-                                hit_line_after_store;
-
-                            dirty_array[req_set][hit_way] <= 1'b1;
+                            store_hit_way <= hit_way;
+                            state <= CACHE_STORE_HIT;
                         end
+                        else begin
+                            response_valid <= 1'b1;
+                            response_data  <= hit_read_data;
+                            response_hit   <= 1'b1;
+                            response_miss  <= 1'b0;
+                            response_fault <= 1'b0;
 
-                        response_valid <= 1'b1;
-                        response_data  <=
-                            req_write ? '0 : hit_read_data;
-                        response_hit   <= 1'b1;
-                        response_miss  <= 1'b0;
-                        response_fault <= 1'b0;
-
-                        state <= CACHE_RESPONSE;
+                            state <= CACHE_RESPONSE;
+                        end
                     end
                     else begin
                         victim_way <= selected_victim;
@@ -628,6 +643,20 @@ module dcache #(
                         else
                             state <= CACHE_REFILL_REQUEST;
                     end
+                end
+
+                CACHE_STORE_HIT: begin
+                    data_array[req_set][store_hit_way] <=
+                        store_hit_line_after_store;
+                    dirty_array[req_set][store_hit_way] <= 1'b1;
+
+                    response_valid <= 1'b1;
+                    response_data  <= '0;
+                    response_hit   <= 1'b1;
+                    response_miss  <= 1'b0;
+                    response_fault <= 1'b0;
+
+                    state <= CACHE_RESPONSE;
                 end
 
                 CACHE_WRITEBACK: begin

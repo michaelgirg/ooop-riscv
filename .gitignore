@@ -24,6 +24,8 @@ synth/vivado/.vivado_user/
 synth/vivado/pipeline_reports.zip
 synth/vivado/dfx_runtime.txt
 /dfx_runtime.txt
+/clockInfo.txt
+/tight_setup_hold_pins.txt
 
 # Generated simulation and memory files
 results/

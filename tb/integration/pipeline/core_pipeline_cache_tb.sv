@@ -108,6 +108,13 @@ module core_pipeline_cache_tb;
         end
     endtask
 
+    task automatic write_imem_word(
+        input int unsigned word_index,
+        input logic [31:0] value
+    );
+        dut.u_imem.mem[word_index / 4][(word_index % 4) * 32 +: 32] = value;
+    endtask
+
     always @(posedge clk) begin
         if (rst) begin
             dirty_writebacks          <= 0;
@@ -135,31 +142,31 @@ module core_pipeline_cache_tb;
         // The branch at PC=8 reaches EX as fetch discovers the wrong-path
         // line at PC=16. Redirect must beat the I-cache-only stall.
         #1;
-        dut.u_imem.mem[0] = encode_addi(12'd1, 5'd0, 5'd1);
-        dut.u_imem.mem[1] = encode_addi(12'd1, 5'd0, 5'd2);
-        dut.u_imem.mem[2] = encode_beq(13'd24, 5'd2, 5'd1);
-        dut.u_imem.mem[3] = encode_addi(12'd99, 5'd0, 5'd10);
+        write_imem_word(0, encode_addi(12'd1, 5'd0, 5'd1));
+        write_imem_word(1, encode_addi(12'd1, 5'd0, 5'd2));
+        write_imem_word(2, encode_beq(13'd24, 5'd2, 5'd1));
+        write_imem_word(3, encode_addi(12'd99, 5'd0, 5'd10));
 
-        dut.u_imem.mem[4] = encode_addi(12'd99, 5'd0, 5'd11);
-        dut.u_imem.mem[5] = encode_addi(12'd99, 5'd0, 5'd12);
-        dut.u_imem.mem[6] = encode_addi(12'd99, 5'd0, 5'd13);
-        dut.u_imem.mem[7] = encode_addi(12'd99, 5'd0, 5'd14);
+        write_imem_word(4, encode_addi(12'd99, 5'd0, 5'd11));
+        write_imem_word(5, encode_addi(12'd99, 5'd0, 5'd12));
+        write_imem_word(6, encode_addi(12'd99, 5'd0, 5'd13));
+        write_imem_word(7, encode_addi(12'd99, 5'd0, 5'd14));
 
         // Store miss overlaps a younger MUL. The following load and ADD also
         // verify that a cache response reaches MEM/WB before load forwarding.
-        dut.u_imem.mem[8]  = encode_addi(12'd5, 5'd0, 5'd3);
-        dut.u_imem.mem[9]  = encode_sw(12'd0, 5'd3, 5'd0);
-        dut.u_imem.mem[10] = encode_mul(5'd3, 5'd3, 5'd6);
-        dut.u_imem.mem[11] = encode_lw(12'd0, 5'd0, 5'd4);
-        dut.u_imem.mem[12] = encode_add(5'd3, 5'd4, 5'd5);
+        write_imem_word(8,  encode_addi(12'd5, 5'd0, 5'd3));
+        write_imem_word(9,  encode_sw(12'd0, 5'd3, 5'd0));
+        write_imem_word(10, encode_mul(5'd3, 5'd3, 5'd6));
+        write_imem_word(11, encode_lw(12'd0, 5'd0, 5'd4));
+        write_imem_word(12, encode_add(5'd3, 5'd4, 5'd5));
 
         // Addresses 0, 32, and 64 map to the same two-way set. The third line
         // forces the dirty address-zero line to write back before replacement.
-        dut.u_imem.mem[13] = encode_addi(12'd32, 5'd0, 5'd7);
-        dut.u_imem.mem[14] = encode_lw(12'd0, 5'd7, 5'd8);
-        dut.u_imem.mem[15] = encode_addi(12'd64, 5'd0, 5'd7);
-        dut.u_imem.mem[16] = encode_lw(12'd0, 5'd7, 5'd9);
-        dut.u_imem.mem[17] = INSTRUCTION_EBREAK;
+        write_imem_word(13, encode_addi(12'd32, 5'd0, 5'd7));
+        write_imem_word(14, encode_lw(12'd0, 5'd7, 5'd8));
+        write_imem_word(15, encode_addi(12'd64, 5'd0, 5'd7));
+        write_imem_word(16, encode_lw(12'd0, 5'd7, 5'd9));
+        write_imem_word(17, INSTRUCTION_EBREAK);
 
         repeat (3) @(posedge clk);
         @(negedge clk);
@@ -195,7 +202,7 @@ module core_pipeline_cache_tb;
             check_value(dut.u_regfile.regs[reg_index], 32'd0,
                         "wrong-path register remained clear");
 
-        check_value(dut.u_dmem.mem[0], 32'd5, "dirty line writeback");
+        check_value(dut.u_dmem.mem[0][31:0], 32'd5, "dirty line writeback");
 
         if (!saw_redirect_during_imiss) begin
             $error("Test never overlapped a redirect with an I-cache miss");

@@ -32,8 +32,10 @@ module slow_line_memory #(
     localparam int BYTES_PER_WORD   = DATA_WIDTH / 8;
     localparam int LINE_BYTES       = LINE_WORDS * BYTES_PER_WORD;
     localparam int LINE_BITS        = DATA_WIDTH * LINE_WORDS;
+    localparam int DEPTH_LINES      = DEPTH_WORDS / LINE_WORDS;
     localparam int BYTE_OFFSET_BITS = $clog2(BYTES_PER_WORD);
     localparam int LINE_OFFSET_BITS = $clog2(LINE_BYTES);
+    localparam int LINE_INDEX_BITS  = (DEPTH_LINES <= 1) ? 1 : $clog2(DEPTH_LINES);
     localparam int COUNT_BITS       = (LATENCY <= 1) ? 1 : $clog2(LATENCY + 1);
 
     typedef enum logic [1:0] {
@@ -44,20 +46,23 @@ module slow_line_memory #(
 
     memory_state_t state;
 
-    // Word storage keeps the existing .hex files and testbench inspection
-    // readable while the cache-facing interface still transfers full lines.
-    logic [DATA_WIDTH-1:0] mem [0:DEPTH_WORDS-1];
+    // A cache line is one memory entry. The registered read and complete-line
+    // write below match FPGA block-RAM ports instead of creating four
+    // asynchronous word reads in LUTs and flip-flops.
+    (* ram_style = "block" *) logic [LINE_BITS-1:0] mem [0:DEPTH_LINES-1];
 
     logic                  pending_write;
-    logic [ADDR_WIDTH-1:0] pending_addr;
+    logic [LINE_INDEX_BITS-1:0] pending_line_index;
     logic [LINE_BITS-1:0]  pending_wdata;
     logic                  pending_fault;
     logic [COUNT_BITS-1:0] cycles_left;
 
     logic [LINE_BITS-1:0] pending_read_line;
-    int unsigned pending_base_word;
+    logic [LINE_INDEX_BITS-1:0] request_line_index;
 
     assign req_ready = (state == MEMORY_IDLE);
+    assign request_line_index =
+        LINE_INDEX_BITS'($unsigned(req_addr) >> LINE_OFFSET_BITS);
 
     function automatic logic request_fault(
         input logic [ADDR_WIDTH-1:0] address
@@ -72,17 +77,6 @@ module slow_line_memory #(
         end
     endfunction
 
-    always_comb begin
-        pending_read_line = '0;
-        pending_base_word = int'($unsigned(pending_addr) >> BYTE_OFFSET_BITS);
-
-        if (!pending_fault) begin
-            for (int word = 0; word < LINE_WORDS; word++)
-                pending_read_line[word * DATA_WIDTH +: DATA_WIDTH] =
-                    mem[pending_base_word + word];
-        end
-    end
-
     initial begin
         if (DATA_WIDTH != 32) $fatal(1, "DATA_WIDTH must be 32");
         if (LINE_WORDS < 2) $fatal(1, "LINE_WORDS must be at least two");
@@ -94,7 +88,7 @@ module slow_line_memory #(
             $fatal(1, "DEPTH_WORDS must be a multiple of LINE_WORDS");
         if (LATENCY < 1) $fatal(1, "LATENCY must be at least one cycle");
 
-        for (int word = 0; word < DEPTH_WORDS; word++) mem[word] = '0;
+        for (int line = 0; line < DEPTH_LINES; line++) mem[line] = '0;
         if (HEX_FILE != "") $readmemh(HEX_FILE, mem);
     end
 
@@ -104,7 +98,7 @@ module slow_line_memory #(
         if (rst) begin
             state          <= MEMORY_IDLE;
             pending_write  <= 1'b0;
-            pending_addr   <= '0;
+            pending_line_index <= '0;
             pending_wdata  <= '0;
             pending_fault  <= 1'b0;
             cycles_left    <= '0;
@@ -117,10 +111,16 @@ module slow_line_memory #(
                 MEMORY_IDLE: begin
                     if (req_valid && req_ready) begin
                         pending_write <= req_write;
-                        pending_addr  <= req_addr;
+                        pending_line_index <= request_line_index;
                         pending_wdata <= req_wdata;
                         pending_fault <= request_fault(req_addr);
                         cycles_left   <= COUNT_BITS'(LATENCY);
+
+                        // Registered line read. Faulting accesses never index
+                        // the array and return an all-zero fault response.
+                        if (!req_write && !request_fault(req_addr))
+                            pending_read_line <= mem[request_line_index];
+
                         state         <= MEMORY_WAIT;
                     end
                 end
@@ -129,18 +129,15 @@ module slow_line_memory #(
                     if (cycles_left > COUNT_BITS'(1))
                         cycles_left <= cycles_left - 1'b1;
                     else if (pending_write) begin
-                        if (!pending_fault) begin
-                            for (int word = 0; word < LINE_WORDS; word++)
-                                mem[pending_base_word + word] <=
-                                    pending_wdata[word * DATA_WIDTH +: DATA_WIDTH];
-                        end
+                        if (!pending_fault)
+                            mem[pending_line_index] <= pending_wdata;
 
                         // Cache writebacks do not need a separate response.
                         state <= MEMORY_IDLE;
                     end
                     else begin
                         resp_valid <= 1'b1;
-                        resp_rdata <= pending_read_line;
+                        resp_rdata <= pending_fault ? '0 : pending_read_line;
                         resp_fault <= pending_fault;
                         state      <= MEMORY_RESPONSE;
                     end

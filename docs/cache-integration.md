@@ -16,6 +16,12 @@ D-cache misses without adding a memory arbiter during this milestone. A unified
 memory controller can be added later without changing either CPU-side cache
 interface.
 
+The delayed backing memories store one complete cache line per block-RAM
+entry. Pipeline HEX files therefore contain one 128-bit line per row for the
+default four-word line, with the lowest-addressed word in bits `[31:0]` (the
+rightmost eight hexadecimal digits). Single-cycle memories continue using one
+32-bit word per row.
+
 ## Pipeline Control Rules
 
 The control priority is:
@@ -87,7 +93,13 @@ The generated reports are:
 synth/vivado/build_pipeline/utilization.rpt
 synth/vivado/build_pipeline/timing_summary.rpt
 synth/vivado/build_pipeline/methodology.rpt
+synth/vivado/build_pipeline/route_status.rpt
 ```
+
+The synthesized checkpoint is saved before implementation. Timing is reported
+after optimization, placement, physical optimization, and routing. If a later
+step is interrupted, `run_pipeline_synth.ps1 -ReportsOnly` resumes from the
+checkpoint and avoids repeating synthesis.
 
 The launcher uses `synth/vivado/.vivado_user` for temporary Vivado profile data.
 This prevents stale per-user app settings from breaking batch startup and keeps
