@@ -54,6 +54,16 @@ module pipeline_control (
   output logic        stall_ex_mem,   // hold EX/MEM (D-cache request in flight)
   output logic        flush_ex_mem    // bubble EX/MEM (muldiv: no result yet)
 );
+  // A legal ID/EX entry cannot be both a MUL/DIV instruction and a branch or
+  // jump. Keep the EX/MEM bubble equation independent of ex_redirect so the
+  // branch-forwarding path does not drive every EX/MEM register control pin.
+  // Older traps, memory stalls, and load-use handling still keep their stated
+  // priority and prevent the unfinished MUL/DIV result from advancing.
+  assign flush_ex_mem = muldiv_stall &&
+                        !trap_req &&
+                        !mem_stall &&
+                        !load_use_stall;
+
   always_comb begin
     // defaults: pipeline advances normally
     pc_redirect  = 1'b0;
@@ -64,7 +74,6 @@ module pipeline_control (
     flush_id_ex  = 1'b0;
     stall_id_ex  = 1'b0;
     stall_ex_mem = 1'b0;
-    flush_ex_mem = 1'b0;
 
     if (trap_req) begin
       // Redirect to the trap vector and squash the front of the pipe.
@@ -107,7 +116,6 @@ module pipeline_control (
       pc_stall     = 1'b1;
       stall_if_id  = 1'b1;
       stall_id_ex  = 1'b1;
-      flush_ex_mem = 1'b1;
     end
     else if (if_stall) begin
       // Hold the miss address in PC, but let the instruction already in IF/ID
