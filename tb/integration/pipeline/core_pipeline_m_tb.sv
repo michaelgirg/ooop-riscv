@@ -71,6 +71,13 @@ module core_pipeline_m_tb;
         end
     endtask
 
+    task automatic write_imem_word(
+        input int unsigned word_index,
+        input logic [31:0] value
+    );
+        dut.u_imem.mem[word_index / 4][(word_index % 4) * 32 +: 32] = value;
+    endtask
+
     task automatic reset_core;
         rst = 1'b1;
         repeat (3) @(posedge clk);
@@ -84,32 +91,32 @@ module core_pipeline_m_tb;
         cycles = 0;
 
         // One of every RV32M operation, then the required divide corner cases.
-        dut.u_imem.mem[0]  = encode_m(MULDIV_MUL,    5'd2, 5'd1, 5'd10);
-        dut.u_imem.mem[1]  = encode_m(MULDIV_MULH,   5'd2, 5'd3, 5'd11);
-        dut.u_imem.mem[2]  = encode_m(MULDIV_MULHSU, 5'd4, 5'd1, 5'd12);
-        dut.u_imem.mem[3]  = encode_m(MULDIV_MULHU,  5'd4, 5'd4, 5'd13);
-        dut.u_imem.mem[4]  = encode_m(MULDIV_DIV,    5'd2, 5'd1, 5'd14);
-        dut.u_imem.mem[5]  = encode_m(MULDIV_DIVU,   5'd2, 5'd4, 5'd15);
-        dut.u_imem.mem[6]  = encode_m(MULDIV_REM,    5'd2, 5'd1, 5'd16);
-        dut.u_imem.mem[7]  = encode_m(MULDIV_REMU,   5'd2, 5'd4, 5'd17);
+        write_imem_word(0, encode_m(MULDIV_MUL,    5'd2, 5'd1, 5'd10));
+        write_imem_word(1, encode_m(MULDIV_MULH,   5'd2, 5'd3, 5'd11));
+        write_imem_word(2, encode_m(MULDIV_MULHSU, 5'd4, 5'd1, 5'd12));
+        write_imem_word(3, encode_m(MULDIV_MULHU,  5'd4, 5'd4, 5'd13));
+        write_imem_word(4, encode_m(MULDIV_DIV,    5'd2, 5'd1, 5'd14));
+        write_imem_word(5, encode_m(MULDIV_DIVU,   5'd2, 5'd4, 5'd15));
+        write_imem_word(6, encode_m(MULDIV_REM,    5'd2, 5'd1, 5'd16));
+        write_imem_word(7, encode_m(MULDIV_REMU,   5'd2, 5'd4, 5'd17));
 
         // Required architectural divide corner cases.
-        dut.u_imem.mem[8]  = encode_m(MULDIV_DIV,  5'd4, 5'd3, 5'd18);  // overflow
-        dut.u_imem.mem[9]  = encode_m(MULDIV_REM,  5'd4, 5'd3, 5'd19);  // overflow
-        dut.u_imem.mem[10] = encode_m(MULDIV_DIV,  5'd5, 5'd1, 5'd20);  // /0
-        dut.u_imem.mem[11] = encode_m(MULDIV_DIVU, 5'd5, 5'd1, 5'd21);  // /0
-        dut.u_imem.mem[12] = encode_m(MULDIV_REM,  5'd5, 5'd1, 5'd22);  // %0
-        dut.u_imem.mem[13] = encode_m(MULDIV_REMU, 5'd5, 5'd1, 5'd23);  // %0
+        write_imem_word(8,  encode_m(MULDIV_DIV,  5'd4, 5'd3, 5'd18));  // overflow
+        write_imem_word(9,  encode_m(MULDIV_REM,  5'd4, 5'd3, 5'd19));  // overflow
+        write_imem_word(10, encode_m(MULDIV_DIV,  5'd5, 5'd1, 5'd20));  // /0
+        write_imem_word(11, encode_m(MULDIV_DIVU, 5'd5, 5'd1, 5'd21));  // /0
+        write_imem_word(12, encode_m(MULDIV_REM,  5'd5, 5'd1, 5'd22));  // %0
+        write_imem_word(13, encode_m(MULDIV_REMU, 5'd5, 5'd1, 5'd23));  // %0
 
         // Forwarding after a multi-cycle EX op: the ADDI reads the MUL result
         // one instruction later, so it must be forwarded from EX/MEM (the MUL is
         // in MEM the cycle the ADDI reaches EX), not read stale from the regfile.
-        dut.u_imem.mem[14] = encode_m(MULDIV_MUL, 5'd2, 5'd1, 5'd24);  // x24 = -2*3 = -6
-        dut.u_imem.mem[15] = encode_addi(12'd1, 5'd24, 5'd25);         // x25 = x24 + 1
+        write_imem_word(14, encode_m(MULDIV_MUL, 5'd2, 5'd1, 5'd24));  // x24 = -2*3 = -6
+        write_imem_word(15, encode_addi(12'd1, 5'd24, 5'd25));         // x25 = x24 + 1
 
         // An M instruction targeting x0 must not change x0.
-        dut.u_imem.mem[16] = encode_m(MULDIV_MUL, 5'd2, 5'd1, 5'd0);
-        dut.u_imem.mem[17] = INSTRUCTION_EBREAK;
+        write_imem_word(16, encode_m(MULDIV_MUL, 5'd2, 5'd1, 5'd0));
+        write_imem_word(17, INSTRUCTION_EBREAK);
 
         reset_core();
 

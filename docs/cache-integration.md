@@ -24,9 +24,12 @@ The control priority is:
 trap > D-cache/MEM stall > EX redirect > load-use > MUL/DIV > I-cache stall
 ```
 
-An I-cache miss freezes only PC and IF/ID. Instructions already in ID, EX, MEM,
-and WB continue draining. A redirect outranks the I-cache stall, so the PC can
-capture a branch target while an obsolete wrong-path refill finishes.
+An I-cache miss holds the miss address in PC. The instruction already in IF/ID
+advances once, and IF/ID is replaced with a bubble while the refill finishes.
+Holding IF/ID too would repeatedly decode the same instruction and could issue
+a store or MUL/DIV operation more than once. Instructions in later stages keep
+draining. A redirect outranks the I-cache stall, so the PC can capture a branch
+target while an obsolete wrong-path refill finishes.
 
 A D-cache transaction freezes EX/MEM and every younger stage. The response is
 first captured in MEM/WB; the held instruction is released on the following
@@ -50,6 +53,9 @@ The core regression includes directed checks for:
 - Dirty eviction and writeback
 - Load-use forwarding after a cache response
 - MUL/DIV completion while MEM is back-pressured
+- Differential register and coherent-memory comparison against the single-cycle core
+- Exactly-once store and MUL/DIV issue behavior across cache stalls
+- Cycle, retirement, stall, branch, redirect, and cache event counts
 - Out-of-range instruction and data refill faults
 
 The automated scripts use normal optimization. Add `-voptargs=+acc` manually

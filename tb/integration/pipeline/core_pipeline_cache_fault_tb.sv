@@ -84,6 +84,20 @@ module core_pipeline_cache_fault_tb;
         };
     endfunction
 
+    task automatic write_ifault_imem_word(
+        input int unsigned word_index,
+        input logic [31:0] value
+    );
+        ifault_dut.u_imem.mem[word_index / 4][(word_index % 4) * 32 +: 32] = value;
+    endtask
+
+    task automatic write_dfault_imem_word(
+        input int unsigned word_index,
+        input logic [31:0] value
+    );
+        dfault_dut.u_imem.mem[word_index / 4][(word_index % 4) * 32 +: 32] = value;
+    endtask
+
     always @(posedge clk) begin
         if (rst) begin
             saw_instruction_fault <= 1'b0;
@@ -105,12 +119,12 @@ module core_pipeline_cache_fault_tb;
 
         #1;
         // A 64-word instruction memory ends at byte address 0xFF.
-        ifault_dut.u_imem.mem[0] = encode_jal(21'd256, 5'd0);
+        write_ifault_imem_word(0, encode_jal(21'd256, 5'd0));
 
         // A load from byte address 0x100 is just outside a 64-word D-memory.
-        dfault_dut.u_imem.mem[0] = encode_addi(12'd256, 5'd0, 5'd1);
-        dfault_dut.u_imem.mem[1] = encode_lw(12'd0, 5'd1, 5'd2);
-        dfault_dut.u_imem.mem[2] = INSTRUCTION_EBREAK;
+        write_dfault_imem_word(0, encode_addi(12'd256, 5'd0, 5'd1));
+        write_dfault_imem_word(1, encode_lw(12'd0, 5'd1, 5'd2));
+        write_dfault_imem_word(2, INSTRUCTION_EBREAK);
 
         repeat (3) @(posedge clk);
         @(negedge clk);

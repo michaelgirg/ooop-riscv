@@ -1,6 +1,6 @@
 # Pipeline RTL
 
-This directory contains the five-stage pipelined RV32I core.
+This directory contains the five-stage pipelined RV32IM core.
 
 ## Files
 
@@ -12,11 +12,17 @@ This directory contains the five-stage pipelined RV32I core.
 - `forwarding_unit.sv`: EX-stage operand forwarding control
 - `load_use_hazard_unit.sv`: one-cycle load-use hazard detector
 - `pipeline_control.sv`: PC stall/redirect and pipeline flush arbiter
+- `icache.sv`: direct-mapped instruction cache
+- `dcache.sv`: set-associative, write-back data cache
+- `slow_line_memory.sv`: variable-latency backing-memory model
+- `mul_unit.sv`, `div_unit.sv`, `muldiv_unit.sv`: RV32M execution path
 
 ## Current Status
 
-The pipeline register modules, forwarding unit, load-use hazard unit, pipeline
-control unit, and top-level smoke integration test pass in Questa.
+The pipeline modules and top-level RV32IM, cache-overlap, fault, and
+differential scoreboard tests pass in Questa. The frozen timing result and the
+interface rules are recorded in `docs/pipeline-baseline.md` and
+`docs/pipeline-interfaces.md`.
 
 ## Ownership Reminder
 

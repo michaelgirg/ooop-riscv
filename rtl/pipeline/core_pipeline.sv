@@ -1,6 +1,6 @@
 import rv32i_pkg::*;
 
-// Five-stage pipelined RV32I core.
+// Five-stage pipelined RV32IM core.
 //
 // Stages:
 // IF  = Instruction Fetch
@@ -53,7 +53,9 @@ module core_pipeline #(
     // ------------------------------------------------------------------------
 
     logic    [31:0] pc;
-    logic    [31:0] pc_plus_four;
+    // Preserve the incrementer output as a net boundary. This keeps Vivado
+    // from absorbing the late branch-redirect mux into the PC + 4 carry chain.
+    (* keep = "true" *) logic [31:0] pc_plus_four;
     logic    [31:0] next_pc;
     logic    [31:0] fetched_instruction;
     logic           imem_access_fault;
@@ -131,6 +133,7 @@ module core_pipeline #(
 
     logic           branch_taken;
     logic           ex_redirect;
+    logic    [31:0] jalr_target;
     logic    [31:0] ex_target;
     logic           control_target_misaligned;
 
@@ -191,7 +194,9 @@ module core_pipeline #(
     logic           pc_stall;
     logic           stall_if_id;
     logic           flush_if_id;
-    logic           flush_id_ex;
+    // Redirects and load-use bubbles drive the entire ID/EX register bank.
+    // Let Vivado replicate this high-fanout control net during implementation.
+    (* max_fanout = 32 *) logic flush_id_ex;
     logic           stall_id_ex;
     logic           stall_ex_mem;
     logic           flush_ex_mem;
@@ -272,8 +277,9 @@ module core_pipeline #(
     always_comb begin
         if_id_d = IF_ID_BUBBLE;
 
-        // Only a completed hit or fault is allowed to enter Decode. A miss
-        // leaves a bubble here while pipeline_control holds the old IF/ID.
+        // Only a completed hit or fault is allowed to enter Decode. On a miss,
+        // pipeline_control holds the PC while the old IF/ID entry advances
+        // once, then clears IF/ID so that instruction cannot be decoded again.
         if_id_d.valid = icache_resp_valid && !core_stop;
         if_id_d.pc = pc;
         if_id_d.instruction = fetched_instruction;
@@ -356,6 +362,10 @@ module core_pipeline #(
 
             id_ex_d.pc = if_id_q.pc;
             id_ex_d.pc_plus_four = if_id_q.pc + 32'd4;
+            // Compute the branch/JAL target before EX. The branch comparison
+            // still happens in EX, but its result no longer feeds a 32-bit
+            // target adder on the path to the PC register.
+            id_ex_d.pc_relative_target = if_id_q.pc + immediate;
 
             id_ex_d.rs1_addr = rs1_addr;
             id_ex_d.rs2_addr = rs2_addr;
@@ -455,11 +465,11 @@ module core_pipeline #(
     );
 
     // Multi-cycle MUL/DIV shares the forwarded EX operands with the ALU. A
-    // completed result is accepted only when ID/EX can advance. A future cache
-    // miss must assert stall_id_ex; the wrapper will then hold its result and
-    // will not reissue the instruction while MEM is back-pressured.
+    // completed result only needs to wait when the older MEM instruction is
+    // back-pressured. The other source of stall_id_ex is muldiv_stall itself,
+    // which cannot coincide with a completed result.
     assign muldiv_active = id_ex_q.valid && id_ex_q.is_muldiv;
-    assign muldiv_result_ready = !stall_id_ex;
+    assign muldiv_result_ready = !mem_stall;
 
     muldiv_unit u_muldiv_unit (
         .clk     (clk_i),
@@ -491,7 +501,12 @@ module core_pipeline #(
 
     assign ex_redirect = id_ex_q.valid && (id_ex_q.jump || branch_taken);
 
-    assign ex_target = id_ex_q.jalr ? (alu_result & 32'hffff_fffe) : (id_ex_q.pc + id_ex_q.immediate);
+    // JALR gets a dedicated target adder. Reusing the general ALU placed its
+    // operand and operation muxes in the MEM/WB-forwarding-to-PC timing path.
+    assign jalr_target = (forwarded_rs1_data + id_ex_q.immediate) &
+                         32'hffff_fffe;
+    assign ex_target = id_ex_q.jalr ? jalr_target :
+                       id_ex_q.pc_relative_target;
 
     assign control_target_misaligned = ex_redirect && (ex_target[1:0] != 2'b00);
 

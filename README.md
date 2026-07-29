@@ -5,7 +5,7 @@ processor. The single-cycle reference core also implements the RV32M
 multiply/divide extension. The project is built as separately verified cores:
 
 1. Single-cycle RV32IM
-2. Five-stage pipelined RV32I
+2. Five-stage pipelined RV32IM
 3. Small out-of-order RV32I
 
 The single-cycle RV32IM core is the passing reference design. The five-stage
@@ -28,7 +28,7 @@ tb/unit/common/               Tests for shared RTL modules
 tb/unit/single_cycle/         Tests for single-cycle-only execution units
 tb/unit/pipeline/             Tests for pipeline-only modules
 tb/integration/single_cycle/  Single-cycle integration test
-tb/integration/pipeline/      Pipeline integration smoke test
+tb/integration/pipeline/      Pipeline integration and differential tests
 tb/programs/                  Hand-authored instruction-memory images
 sim/questa/                   Questa compile and run scripts
 synth/vivado/                 Vivado batch synthesis scripts
@@ -49,8 +49,9 @@ vsim -c -do run_pipeline_core.do
 ```
 
 The first two commands test the shared RTL and single-cycle reference core. The
-last two commands test the pipeline modules and the pipelined top-level smoke
-program. Each script exits with a nonzero result when a test reports an error.
+last two commands test the pipeline modules, directed integration programs, and
+the architectural scoreboard. Each script exits with a nonzero result when a
+test reports an error.
 
 ## Current Verification Status
 
@@ -60,7 +61,16 @@ program. Each script exits with a nonzero result when a test reports an error.
 - Pipeline unit tests: passing
 - Pipeline integration smoke test: passing
 - Cached pipeline overlap and fault tests: passing
-- Vivado synthesis/timing: still to be recorded
+- Differential RV32IM register/memory scoreboard: passing
+- Exactly-once store and MUL/DIV stall checks: passing
+- Vivado post-route timing: 100 MHz met on ZedBoard (`WNS = +0.011 ns`)
+
+The earlier timing checkpoint is tagged `pipeline-100mhz-baseline`; the final
+post-fix candidate is documented separately until it is committed and tagged. See
+[`docs/pipeline-baseline.md`](docs/pipeline-baseline.md) for the frozen baseline
+and verification matrix, and
+[`docs/pipeline-interfaces.md`](docs/pipeline-interfaces.md) for the pipeline
+valid, stall, flush, and cache handshake rules.
 
 ## Side Quests
 

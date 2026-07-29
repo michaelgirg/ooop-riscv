@@ -52,7 +52,7 @@ Pipeline safety rules:
 - Load-use hazards stall PC and `IF/ID` for one cycle and inject one bubble into `ID/EX`.
 - Branches and jumps are resolved in EX with predict-not-taken behavior, so taken redirects flush `IF/ID` and `ID/EX`.
 - A same-cycle WB-to-ID bypass lets Decode see a value being written back on the same clock cycle.
-- An I-cache miss holds only PC and `IF/ID`, allowing older stages to drain.
+- An I-cache miss holds the PC while the current `IF/ID` instruction advances once; `IF/ID` is then cleared to a bubble while the refill finishes.
 - A D-cache request holds `EX/MEM` and younger stages until its response is captured in `MEM/WB`.
 - Redirects outrank I-cache stalls so branch targets are not lost during a refill.
 

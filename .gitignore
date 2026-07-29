@@ -18,12 +18,14 @@ vsim.wlf
 *.xpr
 vivado*.jou
 vivado*.log
+clockInfo.txt
 synth/vivado/build/
 synth/vivado/build_pipeline/
 synth/vivado/.vivado_user/
 synth/vivado/pipeline_reports.zip
 synth/vivado/dfx_runtime.txt
 /dfx_runtime.txt
+/tight_setup_hold_pins.txt
 
 # Generated simulation and memory files
 results/

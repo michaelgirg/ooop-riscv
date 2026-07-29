@@ -104,8 +104,12 @@ module slow_line_memory_tb;
         req_wdata  = '0;
         resp_ready = 1'b0;
 
-        for (int word = 0; word < DEPTH_WORDS; word++)
-            dut.mem[word] = 32'h1000_0000 + word;
+        for (int line = 0; line < (DEPTH_WORDS / LINE_WORDS); line++) begin
+            for (int word = 0; word < LINE_WORDS; word++) begin
+                dut.mem[line][word * DATA_WIDTH +: DATA_WIDTH] =
+                    32'h1000_0000 + (line * LINE_WORDS) + word;
+            end
+        end
 
         repeat (2) @(posedge clk);
         @(negedge clk);
