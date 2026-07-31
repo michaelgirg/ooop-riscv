@@ -38,7 +38,10 @@ module rob (
     output logic [ROB_INDEX_BITS:0] count_o
 );
 
-    // TODO(Mike): Add the entry array, wrapped head/tail tags, allocation,
-    // full-tag completion matching, selective recovery, and head retirement.
+    // TODO(Mike): Add the entry array, position/generation head and tail tags,
+    // allocation, full-tag completion matching, generation-changing selective
+    // recovery, and head retirement. Hold the head payload stable under commit
+    // backpressure. Recovery preserves the branch and all older entries, then
+    // moves the tail to rob_recovery_next_tag(branch_tag).
 
 endmodule

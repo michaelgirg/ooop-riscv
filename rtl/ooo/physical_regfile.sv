@@ -6,7 +6,9 @@ import ooo_pkg::*;
 // Independent first task: yes
 //
 // Expected behavior:
-// - Reset maps p0 to a ready zero value.
+// - Reset gives every register a known zero value. p0 through p31 are ready
+//   because the reset rename map initially points architectural registers at
+//   those physical registers; p32 through p63 begin free and not ready.
 // - Allocating a destination marks that physical register not ready.
 // - Accepting a matching result writes its value and marks it ready.
 // - p0 ignores allocation and writeback and always reads as ready zero.
@@ -33,6 +35,8 @@ module physical_regfile (
 );
 
     // TODO(Mike): Add the value array, ready-bit array, reset behavior,
-    // allocation handling, writeback handling, and p0 protection.
+    // allocation handling, writeback handling, and p0 protection. If the same
+    // nonzero tag is allocated and written back together, allocation wins so a
+    // stale result cannot make the newly allocated destination ready.
 
 endmodule

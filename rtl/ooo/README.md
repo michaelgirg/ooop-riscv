@@ -62,8 +62,9 @@ below are passing their own module-level tests.
 - `x0` always maps to `p0`; `p0` is always ready and always contains zero.
 - A destination physical register becomes not-ready when allocated and ready
   only when its matching result is accepted on the result bus.
-- A ROB completion must match the full wrapped `rob_tag_t`, not only its array
-  index. This rejects late completions from squashed operations.
+- A ROB completion must match the full position-plus-generation `rob_tag_t`,
+  not only its array index. Recovery changes generation before a squashed slot
+  is reused, rejecting late completions from squashed operations.
 - Branch recovery preserves the branch and all older instructions. Only
   younger ROB, issue-queue, and memory-queue entries are removed.
 - The rename-map and free-list checkpoints represent state immediately after

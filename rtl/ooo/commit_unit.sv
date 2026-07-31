@@ -43,5 +43,8 @@ module commit_unit (
 
     // TODO(Mike): Add the retirement state machine, store wait behavior,
     // exception-side-effect suppression, map/free updates, and retire event.
+    // Keep a store request asserted until done or fault. Faulting instructions
+    // may retire as exception events, but must not update the map, free list,
+    // or architectural memory.
 
 endmodule
