@@ -1,8 +1,8 @@
 # Pipeline Interfaces
 
 This document freezes the behavioral contract used by the five-stage pipeline
-and its verification environment. Keep these rules stable while replacing the
-in-order pipeline with an out-of-order back end.
+and its verification environment. The pipeline remains a passing baseline next
+to the OOO core; OOO-specific contracts are summarized at the end.
 
 ## Pipeline Payloads
 
@@ -58,8 +58,8 @@ MEM back-pressure must not restart or discard the operation.
 
 ## Architectural Events
 
-The verification counters use these definitions for both the pipeline and
-future architectures:
+The verification counters use these definitions across the pipeline and later
+OOO measurement work:
 
 - `cycle`: one active, non-reset clock cycle
 - `retire`: one valid, non-halted, non-faulting instruction commits
@@ -78,3 +78,9 @@ register updates, stores, and faults must become visible in program order. Each
 in-flight instruction needs a unique identity, validity, destination, result or
 memory operation, PC, and fault state. Squashed entries cannot wake dependents,
 write a register, send a store, or retire.
+
+The implemented single-wide core uses a position-plus-generation ROB tag for
+that identity, branch-indexed rename/free-list checkpoints, one common result
+bus, and a conservative memory queue. Loads wait for the ROB head; stores wait
+for explicit commit authorization. These choices intentionally prioritize
+precise behavior over memory-level parallelism in version one.

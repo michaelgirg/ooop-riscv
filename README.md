@@ -40,6 +40,21 @@ synth/vivado/                 Vivado batch synthesis scripts
 Generated Questa libraries such as `work/`, `*_work/`, `transcript`, and
 `modelsim.ini` are ignored and should not be committed.
 
+## Documentation
+
+- [`docs/architecture.md`](docs/architecture.md): current single-cycle,
+  pipeline, OOO, memory, recovery, and retirement contracts
+- [`docs/roadmap.md`](docs/roadmap.md): completed milestones and the next
+  superscalar/coherence work
+- [`docs/collaboration.md`](docs/collaboration.md): historical work splits and
+  current OOO maintenance ownership
+- [`rtl/ooo/README.md`](rtl/ooo/README.md): OOO block dependencies and shared
+  valid/ready rules
+- [`docs/rv32i-support.md`](docs/rv32i-support.md): implemented RV32I/RV32M and
+  fault behavior
+- [`docs/sidequests.md`](docs/sidequests.md): optional verification, ISA,
+  memory, FPGA, and larger-architecture experiments
+
 ## Simulation
 
 Run these from `sim/questa` in a terminal.
