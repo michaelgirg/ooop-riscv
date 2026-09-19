@@ -185,6 +185,8 @@ module rename_map_tb;
         if (do_restore) begin
             for (int arch = 0; arch < ARCH_REG_COUNT; arch++)
                 speculative_model[arch] = committed_model[arch];
+            for (int tag = 0; tag < ROB_TAG_VALUES; tag++)
+                checkpoint_valid_model[tag] = 1'b0;
         end
         else if (do_recover) begin
             if (!checkpoint_valid_model[int'(recovery_tag)]) begin
@@ -196,6 +198,7 @@ module rename_map_tb;
                     speculative_model[arch] =
                         checkpoint_model[int'(recovery_tag)][arch];
                 end
+                checkpoint_valid_model[int'(recovery_tag)] = 1'b0;
             end
         end
         else begin

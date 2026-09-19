@@ -202,7 +202,9 @@ module physical_regfile_tb;
                         phys_reg_t'(writeback_index), random_value);
 
             if (random_writeback && random_write_enable &&
-                (writeback_index != 0)) begin
+                (writeback_index != 0) &&
+                !(random_allocate &&
+                  (allocation_index == writeback_index))) begin
                 expected_value[writeback_index] = random_value;
                 expected_ready[writeback_index] = 1'b1;
             end

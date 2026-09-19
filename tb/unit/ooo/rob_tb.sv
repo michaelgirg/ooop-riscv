@@ -14,6 +14,7 @@ module rob_tb;
     rob_tag_t dispatch_tag;
     result_bus_t result;
     recovery_event_t recovery;
+    logic flush_all;
     logic commit_valid;
     rob_commit_t commit;
     logic commit_ready;
@@ -32,6 +33,7 @@ module rob_tb;
         .dispatch_tag_o  (dispatch_tag),
         .result_i        (result),
         .recovery_i      (recovery),
+        .flush_all_i     (flush_all),
         .commit_valid_o  (commit_valid),
         .commit_o        (commit),
         .commit_ready_i  (commit_ready),
@@ -68,6 +70,7 @@ module rob_tb;
         dispatch_uop = RENAMED_UOP_EMPTY;
         result = COMPLETION_EMPTY;
         recovery = RECOVERY_EVENT_NONE;
+        flush_all = 1'b0;
         commit_ready = 1'b0;
     endtask
 
@@ -178,6 +181,38 @@ module rob_tb;
         recovery.redirect_pc = redirect_pc;
         @(posedge clk);
         #1;
+        recovery = RECOVERY_EVENT_NONE;
+    endtask
+
+    task automatic send_branch_completion_and_recovery(
+        input rob_tag_t branch_tag,
+        input logic [31:0] value,
+        input logic [31:0] redirect_pc
+    );
+        @(negedge clk);
+        result = COMPLETION_EMPTY;
+        result.valid = 1'b1;
+        result.rob_tag = branch_tag;
+        result.result = value;
+        result.branch_valid = 1'b1;
+        result.branch_taken = 1'b1;
+        result.branch_mispredicted = 1'b1;
+        result.branch_target = redirect_pc;
+
+        recovery = RECOVERY_EVENT_NONE;
+        recovery.valid = 1'b1;
+        recovery.branch_tag = branch_tag;
+        recovery.redirect_pc = redirect_pc;
+        #1;
+
+        check_bit(dispatch_ready, 1'b0,
+                  "dispatch suppressed during recovery");
+        check_bit(commit_valid, 1'b0,
+                  "commit suppressed during recovery");
+
+        @(posedge clk);
+        #1;
+        result = COMPLETION_EMPTY;
         recovery = RECOVERY_EVENT_NONE;
     endtask
 
@@ -294,11 +329,11 @@ module rob_tb;
         dispatch_one(12, tag_2); // younger, later squashed
         dispatch_one(13, tag_3); // younger, later squashed
         send_completion(tag_0, 32'h4000_0000, 1'b0);
-        send_completion(tag_1, 32'h4000_0001, 1'b0);
         send_completion(tag_3, 32'h4000_0003, 1'b0);
 
         stale_tag = tag_2;
-        send_recovery(tag_1, 32'h0000_0080);
+        send_branch_completion_and_recovery(tag_1, 32'h4000_0001,
+                                            32'h0000_0080);
         check_int(count, 2, "count after selective recovery");
         recovered_tag = rob_recovery_next_tag(tag_1);
         check_tag(dispatch_tag, recovered_tag, "post-recovery dispatch tag");

@@ -145,6 +145,13 @@ module free_list_tb;
         recover_branch_tag = recovery_tag;
         rebuild_valid = rebuild;
         rebuild_in_use = in_use_mask;
+        #1;
+
+        if ((recover_checkpoint || rebuild) &&
+            (allocate_valid !== 1'b0)) begin
+            $error("Allocation remained valid during recovery/rebuild");
+            errors++;
+        end
 
         allocation_fire = take_allocation && (model_queue.size() != 0);
         @(posedge clk);
@@ -193,6 +200,7 @@ module free_list_tb;
 
         #1;
         clear_inputs();
+        #1;
     endtask
 
     function automatic logic model_contains(input phys_reg_t tag);
