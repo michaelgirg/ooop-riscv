@@ -17,6 +17,11 @@ Learning tags:
 - `(L2)`: high value
 - `(L3)`: very high value
 
+Completed foundations are kept in this list when they still have useful
+follow-on experiments. RV32M, variable-latency MUL/DIV, direct-mapped I-cache,
+set-associative write-back D-cache, tree PLRU, the 100 MHz pipeline baseline,
+and the single-wide OOO core are already implemented.
+
 ## Verification And Measurement
 
 1. **Verilator simulation path** `[wknd]` `(L2)`
@@ -24,7 +29,7 @@ Learning tags:
 2. **Spike lockstep co-simulation** `[1wk]` `(L3)`
    Compare retired PC, register writes, memory writes, and trap behavior against the RISC-V ISA simulator.
 3. **CPI/performance counters** `[wknd]` `(L2)`
-   Add cycle and instruction-retired counters, then count load-use stalls, branch flushes, and later cache misses.
+   Pipeline counters exist; add equivalent OOO issue, recovery, queue-occupancy, and memory-wait counters.
 4. **Official `riscv-tests` / `riscv-arch-test`** `[1wk]` `(L2)`
    This likely needs a small CSR/ECALL/tohost harness or a custom test wrapper.
 5. **Random instruction testing** `[1wk]` `(L2)`
@@ -43,18 +48,18 @@ Learning tags:
 10. **Deeper pipeline / higher frequency** `[multi]` `(L2)`
     Split stages, measure Fmax, and compare the frequency gain against extra bubbles and branch penalty.
 11. **Variable-latency units** `[1wk]` `(L2)`
-    Add a multi-cycle multiplier/divider and stall or scoreboard around it.
+    Completed for RV32M. Compare the existing iterative divider and multiplier against pipelined or radix-4 alternatives.
 
 ## Memory Hierarchy
 
 12. **Direct-mapped I-cache and D-cache** `[1wk]` `(L3)`
-    Add tag/data arrays, valid bits, miss FSMs, and pipeline stalls.
+    The I-cache baseline is direct mapped. A direct-mapped D-cache remains useful only as an area/timing comparison.
 13. **Set associativity and replacement** `[1wk]` `(L2)`
-    Try 2-way or 4-way caches with FIFO, random, LRU, or pseudo-LRU replacement.
+    The D-cache already supports parameterized associativity and tree PLRU; compare it with FIFO, random, or true LRU.
 14. **Write policy study** `[wknd]` `(L2)`
     Compare write-through vs write-back and write-allocate vs no-write-allocate.
 15. **Store buffer and store-to-load forwarding** `[1wk]` `(L2)`
-    Useful bridge from in-order memory handling to the later out-of-order load/store queue.
+    Upgrade the conservative OOO memory queue so older stores can wait while safe younger loads continue.
 16. **Trace-driven cache model first** `[wknd]` `(L2)`
     Simulate cache choices in Python or C before committing to RTL.
 17. **Pipelined I-cache hit path** `[wknd]` `(L3)`
@@ -69,7 +74,7 @@ it; do not allow the held instruction to reissue after the unit finishes.
 ## ISA Extensions
 
 18. **M extension** `[1wk]` `(L3)`
-    Add multiply/divide and learn variable-latency functional-unit control.
+    Completed across the single-cycle, pipeline, and single-wide OOO cores; performance optimization remains open.
 19. **C extension** `[1wk]` `(L3)`
     Add 16-bit compressed instructions and rebuild fetch alignment logic.
 20. **A extension** `[1wk]` `(L2)`
@@ -86,7 +91,7 @@ it; do not allow the held instruction to reissue after the unit finishes.
 24. **Minimal CSR file** `[1wk]` `(L2)`
     Add machine-mode CSRs needed for tests, traps, counters, and basic software bring-up.
 25. **Precise traps** `[1wk]` `(L3)`
-    Capture `mepc`/`mcause`, squash correctly, redirect to `mtvec`, and return with `mret`.
+    The OOO core already retires exceptions precisely and squashes speculative state. Add `mepc`, `mcause`, `mtvec`, and `mret` for architectural trap handling.
 26. **Timer and interrupts** `[1wk]` `(L2)`
     Add CLINT-style timer/software interrupts and eventually external interrupts.
 27. **UART/GPIO SoC shell** `[1wk]` `(L2)`
@@ -101,14 +106,14 @@ it; do not allow the held instruction to reissue after the unit finishes.
 30. **Dual-issue in-order** `[multi]` `(L3)`
     Learn issue logic, structural hazards, and extra register-file ports before full OOO.
 31. **Out-of-order core** `[multi]` `(L3)`
-    Add rename, physical registers, reservation stations, ROB, wakeup/select, and in-order retirement.
+    The single-wide baseline now has rename, physical registers, issue/wakeup, a ROB, branch recovery, conservative memory ordering, and in-order retirement. Extend it with prediction, a speculative LSQ, or wider dispatch.
 32. **Multicore and coherence** `[multi]` `(L3)`
     Add multiple harts and a small coherence protocol such as MSI.
 
 ## FPGA, Area, And Power
 
 33. **Vivado timing/utilization reports** `[wknd]` `(L1)`
-    Synthesize the single-cycle and pipeline cores, then record LUTs, FFs, BRAMs, DSPs, and Fmax.
+    Single-cycle and pipeline reports are recorded; synthesize the OOO core and compare LUTs, FFs, BRAMs, DSPs, and Fmax.
 34. **Area and power study** `[wknd]` `(L1)`
     Compare design choices by resource count and switching/power estimates.
 35. **FPGA bring-up** `[1wk]` `(L2)`
@@ -118,9 +123,10 @@ it; do not allow the held instruction to reissue after the unit finishes.
 
 ## Recommended Path
 
-1. Verilator or faster simulation harness.
-2. Spike lockstep or stronger architectural checking.
-3. Minimal CSRs and precise traps.
-4. M extension or cache work.
-5. Branch prediction and CPI measurement.
-6. Dual-issue or out-of-order exploration.
+1. Spike lockstep and randomized retirement checking.
+2. OOO performance and occupancy counters.
+3. Minimal machine CSRs and architectural trap return.
+4. Branch prediction with measured recovery cost.
+5. Store buffer, forwarding, and a speculative load/store queue.
+6. Two-wide superscalar rename, dispatch, completion, and retirement.
+7. Multicore cache coherence, followed by UVM once interfaces stabilize.

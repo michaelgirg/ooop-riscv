@@ -1,6 +1,12 @@
 # Two-Person Work Split
 
-## Person A: Datapath
+The single-cycle and pipeline sections below preserve the ownership used while
+those milestones were built. Both baselines are complete. Current OOO
+maintenance ownership is listed at the end of this document.
+
+## Single-Cycle Split (Historical)
+
+### Person A: Datapath
 
 - `rtl/common/alu.sv`
 - `rtl/common/regfile.sv`
@@ -9,7 +15,7 @@
 - load/store formatting in `rtl/common/dmem.sv`
 - matching unit tests
 
-## Person B: Control and Integration
+### Person B: Control and Integration
 
 - `rtl/common/decoder.sv`
 - `rtl/common/pc.sv`
@@ -18,7 +24,7 @@
 - integration tests and test programs
 - Questa and Vivado project maintenance
 
-## Shared Ownership
+### Shared Ownership
 
 - `rtl/common/rv32i_pkg.sv`
 - architectural decisions
@@ -48,7 +54,7 @@
 - Questa reports no test errors or unexpected latches.
 - Vivado synthesis completes and reports timing/utilization.
 
-## Five-Stage Pipeline Work Split
+## Five-Stage Pipeline Work Split (Historical)
 
 The pipeline uses the classic `IF`, `ID`, `EX`, `MEM`, and `WB` stages. Keep
 `rtl/single_cycle/core_single_cycle.sv` as the passing reference design and
@@ -165,3 +171,42 @@ Memory-related responsibility:
 - The pipeline drains correctly on `ECALL` or `EBREAK`.
 - Unit and integration regressions pass in Questa.
 - Vivado synthesis completes and timing/utilization are recorded.
+
+## Single-Wide OOO Maintenance Ownership
+
+All version-one files listed here are implemented and included in
+`sim/questa/run_ooo.do`. Ownership now identifies the first reviewer for future
+changes rather than unfinished work.
+
+### Mike: Rename and Retirement
+
+- `rtl/ooo/physical_regfile.sv`
+- `rtl/ooo/rename_map.sv`
+- `rtl/ooo/free_list.sv`
+- `rtl/ooo/rob.sv`
+- `rtl/ooo/commit_unit.sv`
+
+### Ant: Frontend and Execution
+
+- `rtl/ooo/ooo_frontend.sv`
+- `rtl/ooo/rename_stage.sv`
+- `rtl/ooo/issue_queue.sv`
+- `rtl/ooo/execute_cluster.sv`
+- `rtl/ooo/result_arbiter.sv`
+
+### Shared: Memory, Recovery, and Integration
+
+- `rtl/ooo/ooo_pkg.sv`
+- `rtl/ooo/memory_queue.sv`
+- `rtl/ooo/ooo_control.sv`
+- `rtl/ooo/core_ooo.sv`
+- `tb/integration/ooo/core_ooo_tb.sv`
+- OOO interface changes and regression acceptance
+
+### OOO Change Rules
+
+1. Keep the full ROB tag on every completion and recovery path.
+2. Update the selected queue, ROB, map, PRF, and free list atomically at dispatch.
+3. Do not expose a store before commit authorization.
+4. Preserve producer payloads until their valid/ready transfer completes.
+5. Run `vsim -c -do run_ooo.do` before merging either person's changes.

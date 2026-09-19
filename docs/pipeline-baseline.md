@@ -17,13 +17,14 @@ BRAM36:        4
 DSPs:          4
 ```
 
-The tag preserves the exact timing result. The pre-OOO verification additions
-and the I-cache replay correction are later working-tree changes.
+The tag preserves that exact timing result. The later verification additions
+and I-cache replay correction were committed in the final pre-OOO baseline.
 
-## Final Pre-OOO Candidate
+## Final Pre-OOO Baseline
 
-The post-fix candidate was implemented and routed on July 28, 2026 using Vivado
-2025.2. It passes both pipeline regressions and closes timing with:
+The post-fix baseline was implemented and routed on July 28, 2026 using Vivado
+2025.2 and committed as `c09b03b` (`final pre-OOO baseline`). It passes both
+pipeline regressions and closes timing with:
 
 ```text
 Clock target:     100 MHz (10.000 ns)
@@ -40,8 +41,9 @@ Critical warnings: 0
 
 The remaining methodology warnings are expected for this RTL-only target: 69
 missing board-level I/O delay warnings, four BRAM timing advisories, and four
-wide-multiplier advisories. The candidate still needs a commit and a final
-annotated tag before it becomes the shared immutable OOO starting point.
+wide-multiplier advisories. The earlier annotated timing tag remains available
+for exact report reproduction; `c09b03b` is the source baseline from which the
+OOO work began.
 
 ## Required Regression
 
@@ -66,10 +68,9 @@ The core regression covers:
 - Exactly one issue and retirement for every directed MUL/DIV instruction
 - Cycle, retirement, stall, branch, redirect, cache, store, and MUL/DIV counts
 
-## Readiness Rule
+## Baseline Status
 
-Do not begin OOO integration from an unverified moving target. The pre-OOO
-baseline is ready only when both pipeline regressions pass, Vivado still meets
-100 MHz after the control fix, and the final commit receives a new annotated
-tag. Push the baseline tag only when both teammates agree that checkpoint is
-the shared starting point.
+The readiness gate is satisfied: both pipeline regressions pass, post-route
+timing meets 100 MHz, and the source checkpoint is committed. Future pipeline
+experiments should branch from this baseline or retain an equivalent passing
+regression before their results are compared with the OOO core.

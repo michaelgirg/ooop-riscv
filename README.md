@@ -6,7 +6,7 @@ multiply/divide extension. The project is built as separately verified cores:
 
 1. Single-cycle RV32IM
 2. Five-stage pipelined RV32IM
-3. Small out-of-order RV32I
+3. Single-wide out-of-order RV32IM
 
 The single-cycle RV32IM core is the passing reference design. The five-stage
 pipeline now integrates RV32M, separate instruction and data caches, delayed
@@ -24,11 +24,14 @@ docs/                         Architecture decisions, roadmap, and ownership
 rtl/common/                   RTL shared by the single-cycle and pipeline cores
 rtl/single_cycle/             Completed single-cycle top level
 rtl/pipeline/                 Five-stage pipeline RTL and top level
+rtl/ooo/                      Single-wide OOO core and shared OOO package
 tb/unit/common/               Tests for shared RTL modules
 tb/unit/single_cycle/         Tests for single-cycle-only execution units
 tb/unit/pipeline/             Tests for pipeline-only modules
 tb/integration/single_cycle/  Single-cycle integration test
 tb/integration/pipeline/      Pipeline integration and differential tests
+tb/unit/ooo/                  OOO block-level tests
+tb/integration/ooo/           OOO architectural integration test
 tb/programs/                  Hand-authored instruction-memory images
 sim/questa/                   Questa compile and run scripts
 synth/vivado/                 Vivado batch synthesis scripts
@@ -36,6 +39,21 @@ synth/vivado/                 Vivado batch synthesis scripts
 
 Generated Questa libraries such as `work/`, `*_work/`, `transcript`, and
 `modelsim.ini` are ignored and should not be committed.
+
+## Documentation
+
+- [`docs/architecture.md`](docs/architecture.md): current single-cycle,
+  pipeline, OOO, memory, recovery, and retirement contracts
+- [`docs/roadmap.md`](docs/roadmap.md): completed milestones and the next
+  superscalar/coherence work
+- [`docs/collaboration.md`](docs/collaboration.md): historical work splits and
+  current OOO maintenance ownership
+- [`rtl/ooo/README.md`](rtl/ooo/README.md): OOO block dependencies and shared
+  valid/ready rules
+- [`docs/rv32i-support.md`](docs/rv32i-support.md): implemented RV32I/RV32M and
+  fault behavior
+- [`docs/sidequests.md`](docs/sidequests.md): optional verification, ISA,
+  memory, FPGA, and larger-architecture experiments
 
 ## Simulation
 
@@ -46,6 +64,7 @@ vsim -c -do run_unit.do
 vsim -c -do run_core.do
 vsim -c -do run_pipeline_unit.do
 vsim -c -do run_pipeline_core.do
+vsim -c -do run_ooo.do
 ```
 
 The first two commands test the shared RTL and single-cycle reference core. The
@@ -63,6 +82,8 @@ test reports an error.
 - Cached pipeline overlap and fault tests: passing
 - Differential RV32IM register/memory scoreboard: passing
 - Exactly-once store and MUL/DIV stall checks: passing
+- Single-wide OOO module suite: passing
+- Single-wide OOO RV32IM architectural integration test: passing
 - Vivado post-route timing: 100 MHz met on ZedBoard (`WNS = +0.011 ns`)
 
 The earlier timing checkpoint is tagged `pipeline-100mhz-baseline`; the final

@@ -25,7 +25,9 @@ package ooo_pkg;
                                    ? 1 : $clog2(PHYS_REG_COUNT);
     localparam int ROB_INDEX_BITS = (ROB_ENTRIES <= 1)
                                     ? 1 : $clog2(ROB_ENTRIES);
-    localparam int ROB_TAG_BITS = ROB_INDEX_BITS + 1;
+    localparam int ROB_POSITION_BITS = ROB_INDEX_BITS + 1;
+    localparam int ROB_GENERATION_BITS = 2;
+    localparam int ROB_TAG_BITS = ROB_GENERATION_BITS + ROB_POSITION_BITS;
     localparam int ISSUE_QUEUE_INDEX_BITS = (ISSUE_QUEUE_ENTRIES <= 1)
                                             ? 1 : $clog2(ISSUE_QUEUE_ENTRIES);
     localparam int MEMORY_QUEUE_INDEX_BITS = (MEMORY_QUEUE_ENTRIES <= 1)
@@ -36,8 +38,13 @@ package ooo_pkg;
 
     typedef logic [ARCH_REG_BITS-1:0]         arch_reg_t;
     typedef logic [PHYS_REG_BITS-1:0]         phys_reg_t;
+    typedef logic [PHYS_REG_COUNT-1:0]        phys_reg_mask_t;
     typedef logic [ROB_INDEX_BITS-1:0]        rob_index_t;
-    typedef logic [ROB_TAG_BITS-1:0]          rob_tag_t;
+    typedef logic [ROB_POSITION_BITS-1:0]     rob_position_t;
+    typedef struct packed {
+        logic [ROB_GENERATION_BITS-1:0] generation;
+        rob_position_t                  position;
+    } rob_tag_t;
     typedef logic [ISSUE_QUEUE_INDEX_BITS-1:0] issue_queue_index_t;
     typedef logic [MEMORY_QUEUE_INDEX_BITS-1:0] memory_queue_index_t;
     typedef logic [FREE_LIST_PTR_BITS-1:0]    free_list_ptr_t;
@@ -138,9 +145,11 @@ package ooo_pkg;
         logic [31:0]        exception_value;
     } decoded_uop_t;
 
-    // The ROB tag includes a wrap bit. A completion must match the complete
-    // tag, not only the array index, before it may update an entry. This keeps
-    // a late response from a squashed operation from completing a reused slot.
+    // A ROB tag contains a circular position and a generation. The position
+    // provides age ordering; the generation changes when normal allocation
+    // wraps or recovery rewinds the tail. A completion must match the complete
+    // tag before it may update an entry. This keeps a late response from a
+    // squashed operation from completing a reused slot after recovery.
     typedef struct packed {
         decoded_uop_t decoded;
         rob_tag_t     rob_tag;
@@ -318,11 +327,30 @@ package ooo_pkg;
     // ---------------------------------------------------------------------
 
     function automatic rob_index_t rob_index(input rob_tag_t tag);
-        return tag[ROB_INDEX_BITS-1:0];
+        return tag.position[ROB_INDEX_BITS-1:0];
     endfunction
 
     function automatic rob_tag_t rob_next_tag(input rob_tag_t tag);
-        return tag + rob_tag_t'(1);
+        rob_tag_t next_tag;
+
+        next_tag = tag;
+        next_tag.position = tag.position + rob_position_t'(1);
+        if (tag.position == '1)
+            next_tag.generation = tag.generation + 1'b1;
+
+        return next_tag;
+    endfunction
+
+    // Recovery places the tail directly after the surviving branch and moves
+    // to a new generation. The new instruction may reuse the same array slot
+    // as a squashed instruction, but it can never reuse that instruction's
+    // complete ROB tag.
+    function automatic rob_tag_t rob_recovery_next_tag(input rob_tag_t branch_tag);
+        rob_tag_t next_tag;
+
+        next_tag.generation = branch_tag.generation + 1'b1;
+        next_tag.position = branch_tag.position + rob_position_t'(1);
+        return next_tag;
     endfunction
 
     // Returns one when candidate is younger than reference in the current
@@ -338,9 +366,11 @@ package ooo_pkg;
         int tag_value_count;
 
         tag_value_count = 2 * ROB_ENTRIES;
-        candidate_age = (int'(candidate) - int'(head) + tag_value_count)
+        candidate_age = (int'(candidate.position) - int'(head.position) +
+                         tag_value_count)
                         % tag_value_count;
-        reference_age = (int'(reference) - int'(head) + tag_value_count)
+        reference_age = (int'(reference.position) - int'(head.position) +
+                         tag_value_count)
                         % tag_value_count;
 
         return candidate_age > reference_age;

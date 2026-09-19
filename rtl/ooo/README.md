@@ -1,11 +1,14 @@
-# Single-Wide OOO RTL Scaffold
+# Single-Wide OOO RTL
 
-This directory starts a new out-of-order core without modifying the passing
-five-stage pipeline. The first version renames, dispatches, and retires at most
-one instruction per cycle. Ready instructions may still execute out of order.
+This directory contains a working single-wide RV32IM out-of-order core without
+modifying the passing five-stage pipeline. It fetches, renames, dispatches, and
+retires at most one instruction per cycle, while independent ready operations
+may issue and complete out of order.
 
-Only `ooo_pkg.sv` is implemented. Every other SystemVerilog file is an
-interface-and-comment skeleton for the assigned owner to complete.
+Every block below is implemented and has a self-checking procedural testbench.
+`core_ooo_tb.sv` additionally runs a dependency-heavy program through the full
+core, including MUL, store/load ordering, branch recovery, wrong-path squash,
+and EBREAK retirement.
 
 ## Ownership
 
@@ -31,8 +34,7 @@ interface-and-comment skeleton for the assigned owner to complete.
 2. `ooo_control.sv`
 3. `core_ooo.sv`
 
-The together files should not be implemented until the dependencies listed
-below are passing their own module-level tests.
+The ownership list is kept as a maintenance guide for future changes.
 
 ## Build Order And Dependencies
 
@@ -53,7 +55,18 @@ below are passing their own module-level tests.
      recovery, and the existing D-cache request/response interface.
 5. **Together last**
    - `ooo_control.sv` joins branch recovery, precise traps, and redirects.
-   - `core_ooo.sv` is wiring only after every block above works independently.
+   - `core_ooo.sv` atomically joins rename, ROB allocation, issue, memory,
+     writeback, recovery, and retirement.
+
+## Current Version-One Choices
+
+- Predict not taken; branches and jumps resolve in the execution cluster.
+- One common result bus with fair execution/memory arbitration.
+- Loads access memory only at the ROB head.
+- Stores access memory only after in-order commit authorization.
+- One outstanding data-cache transaction.
+- Precise traps flush speculative state and rebuild rename/free-list state from
+  the committed architectural map.
 
 ## Shared Rules
 
@@ -62,8 +75,9 @@ below are passing their own module-level tests.
 - `x0` always maps to `p0`; `p0` is always ready and always contains zero.
 - A destination physical register becomes not-ready when allocated and ready
   only when its matching result is accepted on the result bus.
-- A ROB completion must match the full wrapped `rob_tag_t`, not only its array
-  index. This rejects late completions from squashed operations.
+- A ROB completion must match the full position-plus-generation `rob_tag_t`,
+  not only its array index. Recovery changes generation before a squashed slot
+  is reused, rejecting late completions from squashed operations.
 - Branch recovery preserves the branch and all older instructions. Only
   younger ROB, issue-queue, and memory-queue entries are removed.
 - The rename-map and free-list checkpoints represent state immediately after

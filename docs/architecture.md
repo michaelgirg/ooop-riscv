@@ -2,7 +2,7 @@
 
 ## Fixed Project Decisions
 
-- ISA: RV32I base integer ISA
+- ISA: RV32IM (`RV32I` base integer ISA plus the `M` extension)
 - XLEN: 32 bits
 - Instruction width: 32 bits
 - Register count: 32 architectural registers
@@ -27,7 +27,7 @@ PC -> IMEM -> Decoder -> Register File -> ALU -> DMEM -> Writeback
 ```
 
 The single-cycle core completes one instruction between rising clock edges. It
-is kept as the simple reference design for the pipelined core.
+is kept as the simple architectural reference for the pipeline and OOO cores.
 
 ## Five-Stage Pipeline
 
@@ -56,6 +56,33 @@ Pipeline safety rules:
 - A D-cache request holds `EX/MEM` and younger stages until its response is captured in `MEM/WB`.
 - Redirects outrank I-cache stalls so branch targets are not lost during a refill.
 
+## Single-Wide Out-of-Order Core
+
+```text
+Fetch/Decode -> Rename -> ROB + Issue/Memory Queues -> Execute/Memory
+                    ^                    |                    |
+                    |                    +<- Result Bus <-----+
+                    +<- Commit/Recovery <- ROB Head
+```
+
+The first OOO implementation accepts and retires at most one instruction per
+cycle. Independent ready instructions may issue and complete out of order.
+
+- The speculative rename map supplies source physical registers and receives a
+  new destination from the free list.
+- The physical register file tracks value readiness; accepted result-bus
+  broadcasts write values and wake matching queue operands.
+- The issue queue selects the oldest ready ALU, branch, jump, or RV32M operation.
+- The generation-tagged ROB accepts out-of-order completions and retires only
+  its complete head entry.
+- Predict-not-taken branches resolve in the execution cluster. A misprediction
+  restores the branch's rename/free-list checkpoints and removes younger work.
+- Loads access the D-cache only at the ROB head. Stores calculate their address
+  early but reach the D-cache only after commit authorization.
+- Traps and halt flush speculative state. The committed rename map is the
+  recovery point for precise exceptions.
+- A single fair result arbiter merges execution and load/store completions.
+
 ## Memory Contract
 
 - Instruction and data addresses are byte addresses.
@@ -65,13 +92,17 @@ Pipeline safety rules:
 - Faulting loads return zero and faulting stores do not modify memory.
 - Pipeline backing memories transfer complete cache lines with valid/ready handshakes.
 - The pipeline I-cache is direct mapped; the D-cache is set associative, write back, and write allocate.
-- Because the current cores have no trap handler, faults halt the core and are exposed through debug outputs.
+- The single-cycle and pipeline cores halt on faults. The OOO core reports a
+  precise retirement exception and redirects to its external trap-vector input;
+  machine CSRs and `mret` are not implemented yet.
 
 ## Integration Contract
 
-All instruction decode constants and packed pipeline payloads belong in
-`rtl/common/rv32i_pkg.sv`. Shared interfaces must be reviewed by both
-contributors before they are changed.
+Instruction decode constants and packed pipeline payloads belong in
+`rtl/common/rv32i_pkg.sv`. OOO identities, queue payloads, completion records,
+ROB entries, recovery events, and retirement events belong in
+`rtl/ooo/ooo_pkg.sv`. Shared interfaces must be reviewed by both contributors
+before they are changed.
 
 The cores expose a small debug interface for integration tests:
 
@@ -81,14 +112,20 @@ The cores expose a small debug interface for integration tests:
 - illegal-instruction state
 - instruction-access/alignment fault state
 - data-access/alignment fault state
+- OOO retirement event with PC, instruction, register/store side effects, and
+  exception metadata
 
 Architectural register checking should normally use hierarchical access only
 inside testbenches.
 
 ## Pipeline and OOO Contract
 
-Later cores must carry instruction validity, PC, destination register, memory
-operation, and fault information with each in-flight instruction. Register and
-memory side effects must be suppressed for squashed or faulting instructions.
-The out-of-order core must delay architectural register writes and stores until
-in-order retirement.
+Both non-single-cycle cores carry validity, PC, destination, memory operation,
+and fault information with every in-flight instruction. Squashed or faulting
+instructions cannot create register or memory side effects.
+
+The OOO core additionally uses a complete position-plus-generation ROB tag as
+the instruction identity. A completion must match that full tag, preventing a
+late response from a squashed operation from completing a reused slot. Register
+map updates, stale-register releases, stores, exceptions, and halt become
+architectural only at in-order retirement.
